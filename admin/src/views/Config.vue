@@ -172,33 +172,126 @@
           </el-form>
         </el-tab-pane>
 
-        <el-tab-pane label="七牛云配置" name="qiniu">
+        <el-tab-pane label="图床配置" name="storage">
           <el-form :model="config" label-position="top">
-            <el-row :gutter="24">
-              <el-col :span="12">
-                <el-form-item label="Access Key">
-                  <el-input v-model="config.qiniu_access_key" placeholder="请输入 Access Key" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="Secret Key">
-                  <el-input v-model="config.qiniu_secret_key" type="password" placeholder="请输入 Secret Key" />
-                </el-form-item>
-              </el-col>
-            </el-row>
+            <el-form-item label="存储类型">
+              <el-select v-model="config.storage_type" placeholder="请选择存储类型" class="w-full">
+                <el-option label="本地存储" value="local" />
+                <el-option label="七牛云存储" value="qiniu" />
+                <el-option label="阿里云OSS" value="aliyun" />
+                <el-option label="腾讯云COS" value="tencent" />
+              </el-select>
+            </el-form-item>
 
-            <el-row :gutter="24">
-              <el-col :span="12">
-                <el-form-item label="Bucket 名称">
-                  <el-input v-model="config.qiniu_bucket" placeholder="请输入 Bucket 名称" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="CDN 域名">
-                  <el-input v-model="config.qiniu_domain" placeholder="cdn.example.com" />
-                </el-form-item>
-              </el-col>
-            </el-row>
+            <template v-if="config.storage_type === 'local'">
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="存储路径">
+                    <el-input v-model="config.local_storage_path" placeholder="./uploads" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="访问URL">
+                    <el-input v-model="config.local_storage_base_url" placeholder="/uploads" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </template>
+
+            <template v-if="config.storage_type === 'qiniu'">
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="Access Key">
+                    <el-input v-model="config.qiniu_access_key" placeholder="请输入 Access Key" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Secret Key">
+                    <el-input v-model="config.qiniu_secret_key" type="password" placeholder="请输入 Secret Key" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="Bucket 名称">
+                    <el-input v-model="config.qiniu_bucket" placeholder="请输入 Bucket 名称" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="CDN 域名">
+                    <el-input v-model="config.qiniu_domain" placeholder="cdn.example.com" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </template>
+
+            <template v-if="config.storage_type === 'aliyun'">
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="AccessKey ID">
+                    <el-input v-model="config.aliyun_access_key_id" placeholder="请输入 AccessKey ID" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="AccessKey Secret">
+                    <el-input v-model="config.aliyun_access_key_secret" type="password" placeholder="请输入 AccessKey Secret" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="Bucket">
+                    <el-input v-model="config.aliyun_bucket" placeholder="请输入 Bucket" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Endpoint">
+                    <el-input v-model="config.aliyun_endpoint" placeholder="oss-cn-hangzhou.aliyuncs.com" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="CDN 域名">
+                    <el-input v-model="config.aliyun_domain" placeholder="cdn.example.com" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </template>
+
+            <template v-if="config.storage_type === 'tencent'">
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="Secret ID">
+                    <el-input v-model="config.tencent_secret_id" placeholder="请输入 Secret ID" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Secret Key">
+                    <el-input v-model="config.tencent_secret_key" type="password" placeholder="请输入 Secret Key" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="Bucket">
+                    <el-input v-model="config.tencent_bucket" placeholder="请输入 Bucket" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Region">
+                    <el-input v-model="config.tencent_region" placeholder="ap-guangzhou" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="CDN 域名">
+                    <el-input v-model="config.tencent_domain" placeholder="cdn.example.com" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </template>
           </el-form>
         </el-tab-pane>
 
@@ -251,10 +344,23 @@ const config = ref({
   email_password: '',
   email_from: '',
   email_from_name: '',
+  storage_type: 'local',
+  local_storage_path: '',
+  local_storage_base_url: '',
   qiniu_access_key: '',
   qiniu_secret_key: '',
   qiniu_bucket: '',
   qiniu_domain: '',
+  aliyun_access_key_id: '',
+  aliyun_access_key_secret: '',
+  aliyun_bucket: '',
+  aliyun_endpoint: '',
+  aliyun_domain: '',
+  tencent_secret_id: '',
+  tencent_secret_key: '',
+  tencent_bucket: '',
+  tencent_region: '',
+  tencent_domain: '',
   jwt_secret: '',
   jwt_expire_days: '7'
 })
@@ -396,10 +502,23 @@ async function loadConfig() {
         email_password: res.email_password || '',
         email_from: res.email_from || '',
         email_from_name: res.email_from_name || '',
+        storage_type: res.storage_type || 'local',
+        local_storage_path: res.local_storage_path || '',
+        local_storage_base_url: res.local_storage_base_url || '',
         qiniu_access_key: res.qiniu_access_key || '',
         qiniu_secret_key: res.qiniu_secret_key || '',
         qiniu_bucket: res.qiniu_bucket || '',
         qiniu_domain: res.qiniu_domain || '',
+        aliyun_access_key_id: res.aliyun_access_key_id || '',
+        aliyun_access_key_secret: res.aliyun_access_key_secret || '',
+        aliyun_bucket: res.aliyun_bucket || '',
+        aliyun_endpoint: res.aliyun_endpoint || '',
+        aliyun_domain: res.aliyun_domain || '',
+        tencent_secret_id: res.tencent_secret_id || '',
+        tencent_secret_key: res.tencent_secret_key || '',
+        tencent_bucket: res.tencent_bucket || '',
+        tencent_region: res.tencent_region || '',
+        tencent_domain: res.tencent_domain || '',
         jwt_secret: res.jwt_secret || '',
         jwt_expire_days: res.jwt_expire_days || '7'
       }
@@ -436,6 +555,10 @@ onMounted(() => {
 <style scoped>
 .config-page {
   max-width: 1000px;
+}
+
+.w-full {
+  width: 100%;
 }
 
 .main-card {

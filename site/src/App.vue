@@ -121,6 +121,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import api from '@/api'
+import defaultLogo from '@/assets/bbs.png'
 
 const router = useRouter()
 const route = useRoute()
@@ -171,7 +172,7 @@ function handleSearch() {
 }
 
 function updateFavicon(iconUrl) {
-  if (!iconUrl) return
+  const icon = iconUrl || defaultLogo
   
   let link = document.querySelector("link[rel*='icon']")
   if (!link) {
@@ -179,7 +180,7 @@ function updateFavicon(iconUrl) {
     link.rel = 'icon'
     document.head.appendChild(link)
   }
-  link.href = iconUrl
+  link.href = icon
 }
 
 function updatePageTitle(title) {

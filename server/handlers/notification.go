@@ -5,13 +5,16 @@ import (
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/utils"
+	"log"
 	"net/http"
 	"strconv"
 )
 
+// GetNotifications 获取当前用户的通知列表处理器
 func GetNotifications(w http.ResponseWriter, r *http.Request) {
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
 
+	// 解析分页参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
@@ -26,11 +29,21 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * pageSize
 
-	database.DB.Model(&models.Notification{}).Where("user_id = ?", userID).Count(&total)
-	database.DB.Where("user_id = ?", userID).
+	// 统计通知总数
+	if err := database.DB.Model(&models.Notification{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		log.Printf("get notifications: failed to count notifications, userID: %d, error: %v", userID, err)
+	}
+
+	// 查询通知列表
+	if err := database.DB.Where("user_id = ?", userID).
 		Order("created_at DESC").
-		Offset(offset).Limit(pageSize).
-		Find(&notifications)
+		Offset(offset).
+		Limit(pageSize).
+		Find(&notifications).Error; err != nil {
+		log.Printf("get notifications: failed to query notifications, userID: %d, error: %v", userID, err)
+		utils.Error(w, 500, "获取通知列表失败")
+		return
+	}
 
 	utils.Success(w, map[string]interface{}{
 		"list":      notifications,
@@ -40,23 +53,39 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetUnreadNotificationCount 获取未读通知数量处理器
 func GetUnreadNotificationCount(w http.ResponseWriter, r *http.Request) {
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
 
 	var count int64
-	database.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", userID, false).Count(&count)
+	if err := database.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", userID, false).Count(&count).Error; err != nil {
+		log.Printf("get unread notification count: failed to count notifications, userID: %d, error: %v", userID, err)
+		utils.Error(w, 500, "获取未读数量失败")
+		return
+	}
 
 	utils.Success(w, map[string]int64{"count": count})
 }
 
+// MarkAllNotificationsRead 标记所有通知已读处理器
 func MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
 
-	database.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", userID, false).Update("is_read", true)
+	if err := database.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", userID, false).Update("is_read", true).Error; err != nil {
+		log.Printf("mark all notifications read: failed to mark notifications as read, userID: %d, error: %v", userID, err)
+		utils.Error(w, 500, "标记已读失败")
+		return
+	}
 
+	log.Printf("mark all notifications read: notifications marked as read, userID: %d", userID)
 	utils.Success(w, nil)
 }
 
+// CreateNotification 创建通知（内部函数）
+// userID: 接收通知的用户ID
+// notifType: 通知类型
+// content: 通知内容
+// link: 点击跳转链接
 func CreateNotification(userID uint, notifType, content, link string) {
 	notification := models.Notification{
 		UserID:  userID,
@@ -65,5 +94,7 @@ func CreateNotification(userID uint, notifType, content, link string) {
 		Link:    link,
 		IsRead:  false,
 	}
-	database.DB.Create(&notification)
+	if err := database.DB.Create(&notification).Error; err != nil {
+		log.Printf("create notification: failed to create notification, userID: %d, type: %s, error: %v", userID, notifType, err)
+	}
 }

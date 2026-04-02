@@ -9,27 +9,43 @@ import (
 	"net/http"
 )
 
+// main 程序入口
+// 初始化数据库、缓存、路由并启动 HTTP 服务器
 func main() {
+	// 初始化数据库连接
 	database.InitDB()
+
+	// 执行数据库迁移
 	database.AutoMigrate()
+
+	// 初始化缓存
 	cache.Init()
 
+	// 初始化默认数据（版块、配置、标签、管理员等）
 	seedData()
 
+	// 配置路由
 	r := routes.SetupRoutes()
 
-	log.Printf("Server starting on :8080...")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	// 启动 HTTP 服务器
+	log.Printf("server starting on :8080...")
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatalf("server failed to start: %v", err)
+	}
 }
 
+// seedData 初始化默认数据
+// 如果数据库为空，创建默认的版块、配置、标签、用户和话题数据
 func seedData() {
+	// ========== 初始化版块数据 ==========
 	var forumCount int64
 	database.DB.Model(&struct{}{}).Table("forums").Count(&forumCount)
 	if forumCount == 0 {
+		// 定义默认版块
 		forums := []struct {
-			Name        string
-			Description string
-			SortOrder   int
+			Name        string // 版块名称
+			Description string // 版块描述
+			SortOrder   int    // 排序顺序
 		}{
 			{"全部", "默认首页，显示所有板块的帖子", 1},
 			{"技术交流", "编程语言、框架、架构等纯技术讨论", 2},
@@ -41,56 +57,67 @@ func seedData() {
 			{"站务管理", "公告、反馈、版务", 8},
 		}
 
+		// 插入版块数据
 		for _, f := range forums {
-			database.DB.Exec("INSERT INTO forums (name, description, sort_order, allow_post, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))",
-				f.Name, f.Description, f.SortOrder, true)
+			if err := database.DB.Exec("INSERT INTO forums (name, description, sort_order, allow_post, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))",
+				f.Name, f.Description, f.SortOrder, true).Error; err != nil {
+				log.Printf("failed to create forum: %s, error: %v", f.Name, err)
+			}
 		}
-		log.Println("Default forums created")
+		log.Println("default forums created")
 	}
 
+	// ========== 初始化网站配置 ==========
 	var configCount int64
 	database.DB.Model(&struct{}{}).Table("site_configs").Count(&configCount)
 	if configCount == 0 {
+		// 定义默认配置项
 		configs := []struct {
-			Key   string
-			Value string
+			Key   string // 配置键
+			Value string // 配置值
 		}{
-			{"site_name", "彩虹BBS"},
-			{"site_logo", ""},
-			{"site_icon", ""},
-			{"site_description", "一个现代化的社区论坛系统"},
-			{"email_enabled", "false"},
-			{"email_host", ""},
-			{"email_port", "465"},
-			{"email_user", ""},
-			{"email_password", ""},
-			{"email_from", ""},
-			{"email_from_name", "彩虹BBS"},
-			{"qiniu_access_key", ""},
-			{"qiniu_secret_key", ""},
-			{"qiniu_bucket", ""},
-			{"qiniu_domain", ""},
-			{"jwt_secret", "change-this-secret-in-production"},
-			{"jwt_expire_days", "7"},
-			{"cache_num_counters", "10000"},
-			{"cache_max_cost", "10000000"},
+			{"site_name", "彩虹BBS"},                    // 网站名称
+			{"site_logo", ""},                          // 网站 Logo
+			{"site_icon", ""},                          // 网站 Icon
+			{"site_description", "一个现代化的社区论坛系统"}, // 网站描述
+			{"email_enabled", "false"},                 // 邮件服务开关
+			{"email_host", ""},                         // SMTP 服务器
+			{"email_port", "465"},                      // SMTP 端口
+			{"email_user", ""},                         // 邮箱用户名
+			{"email_password", ""},                    // 邮箱密码
+			{"email_from", ""},                         // 发件人地址
+			{"email_from_name", "彩虹BBS"},             // 发件人名称
+			{"qiniu_access_key", ""},                  // 七牛云 AccessKey
+			{"qiniu_secret_key", ""},                   // 七牛云 SecretKey
+			{"qiniu_bucket", ""},                       // 七牛云存储空间
+			{"qiniu_domain", ""},                        // 七牛云 CDN 域名
+			{"jwt_secret", "change-this-secret-in-production"}, // JWT 密钥
+			{"jwt_expire_days", "7"},                   // JWT 过期天数
+			{"cache_num_counters", "10000"},            // 缓存计数器数量
+			{"cache_max_cost", "10000000"},             // 缓存最大成本
 		}
+
+		// 插入配置数据
 		for _, c := range configs {
-			database.DB.Exec("INSERT INTO site_configs (key, value, created_at, updated_at) VALUES (?, ?, datetime('now'), datetime('now'))",
-				c.Key, c.Value)
+			if err := database.DB.Exec("INSERT INTO site_configs (key, value, created_at, updated_at) VALUES (?, ?, datetime('now'), datetime('now'))",
+				c.Key, c.Value).Error; err != nil {
+				log.Printf("failed to create config: %s, error: %v", c.Key, err)
+			}
 		}
-		log.Println("Default site configs created")
+		log.Println("default site configs created")
 	}
 
+	// ========== 初始化标签数据 ==========
 	var tagCount int64
 	database.DB.Model(&struct{}{}).Table("tags").Count(&tagCount)
 	if tagCount == 0 {
+		// 定义默认标签
 		tags := []struct {
-			Name        string
-			Icon        string
-			Description string
-			SortOrder   int
-			IsOfficial  bool
+			Name        string // 标签名称
+			Icon        string // 标签图标
+			Description string // 标签描述
+			SortOrder   int    // 排序顺序
+			IsOfficial  bool   // 是否官方标签
 		}{
 			{"今日份松弛", "😌", "分享慢生活、拒绝焦虑的瞬间", 1, true},
 			{"爱你老己", "💖", "对自己好的方式、自我关怀", 2, true},
@@ -105,28 +132,39 @@ func seedData() {
 			{"破防了", "💔", "感动、扎心、被戳中的瞬间", 11, true},
 			{"什么水平？", "🤔", "求评价、求鉴定、秀成果", 12, true},
 		}
+
+		// 插入标签数据
 		for _, t := range tags {
-			database.DB.Exec("INSERT INTO tags (name, icon, description, sort_order, usage_count, is_official, is_banned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
-				t.Name, t.Icon, t.Description, t.SortOrder, 0, t.IsOfficial, false)
+			if err := database.DB.Exec("INSERT INTO tags (name, icon, description, sort_order, usage_count, is_official, is_banned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
+				t.Name, t.Icon, t.Description, t.SortOrder, 0, t.IsOfficial, false).Error; err != nil {
+				log.Printf("failed to create tag: %s, error: %v", t.Name, err)
+			}
 		}
-		log.Println("Default tags created")
+		log.Println("default tags created")
 	}
 
+	// ========== 初始化管理员和测试用户 ==========
 	var userCount int64
 	database.DB.Model(&struct{}{}).Table("users").Count(&userCount)
 	if userCount == 0 {
-		// set auto increment start
+		// 设置用户自增起始值
 		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('users', 9999)")
-		adminPassword, _ := utils.HashPassword("12345678")
-		database.DB.Exec(`INSERT INTO users (username, email, nickname, password_hash, role, credits, created_at, updated_at) 
-			VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-			"admin", "admin@example.com", "管理员", adminPassword, 2, 10000)
-		log.Println("Admin user created (username: admin, password: 12345678)")
 
+		// 创建管理员账号
+		adminPassword, _ := utils.HashPassword("12345678")
+		if err := database.DB.Exec(`INSERT INTO users (username, email, nickname, password_hash, role, credits, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+			"admin", "admin@example.com", "管理员", adminPassword, 2, 10000).Error; err != nil {
+			log.Printf("failed to create admin user: %v", err)
+		} else {
+			log.Println("admin user created (username: admin, password: 12345678)")
+		}
+
+		// 创建测试用户
 		users := []struct {
-			Username string
-			Email    string
-			Nickname string
+			Username string // 用户名
+			Email    string // 邮箱
+			Nickname string // 昵称
 		}{
 			{"testuser1", "test1@example.com", "测试用户1"},
 			{"testuser2", "test2@example.com", "测试用户2"},
@@ -142,26 +180,31 @@ func seedData() {
 
 		for _, u := range users {
 			hashedPassword, _ := utils.HashPassword("123456")
-			database.DB.Exec(`INSERT INTO users (username, email, nickname, password_hash, credits, created_at, updated_at) 
+			if err := database.DB.Exec(`INSERT INTO users (username, email, nickname, password_hash, credits, created_at, updated_at)
 				VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-				u.Username, u.Email, u.Nickname, hashedPassword, 1000)
+				u.Username, u.Email, u.Nickname, hashedPassword, 1000).Error; err != nil {
+				log.Printf("failed to create test user: %s, error: %v", u.Username, err)
+			}
 		}
-		log.Println("Test users created")
+		log.Println("test users created")
 	}
 
+	// ========== 初始化测试话题 ==========
 	var topicCount int64
 	database.DB.Model(&struct{}{}).Table("topics").Count(&topicCount)
 	if topicCount == 0 {
-		// set auto increment start
+		// 设置话题自增起始值
 		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('topics', 9999)")
+
+		// 定义测试话题
 		topics := []struct {
-			Title      string
-			Content    string
-			UserID     uint
-			ForumID    uint
-			LikeCount  int
-			ReplyCount int
-			ViewCount  int
+			Title      string // 话题标题
+			Content    string // 话题内容
+			UserID     uint   // 发布者用户ID
+			ForumID    uint   // 所属版块ID
+			LikeCount  int    // 点赞数
+			ReplyCount int    // 回复数
+			ViewCount  int    // 浏览数
 		}{
 			{"bbs-go v3.5.0 发布，升级 go1.18", "文档地址：https://docs.bbs-go.com/\n官网交流：https://mlog.club\n问题反馈：https://mlog.club/topic/node/3\n\n本次更新内容：\n1. 升级 Go 1.18 版本\n2. 优化数据库查询性能\n3. 修复已知 bug\n4. 新增配置管理功能", 1, 4, 12, 8, 352},
 			{"Vue3 + TypeScript 项目实践分享", "最近用 Vue3 + TypeScript 做了一个项目，分享一些实践经验：\n\n1. 组合式 API 真的很香，逻辑复用更方便了\n2. TypeScript 的类型推导需要好好配置\n3. Pinia 比 Vuex 更简洁好用\n\n有问题的朋友欢迎留言讨论~", 2, 4, 45, 18, 892},
@@ -175,12 +218,14 @@ func seedData() {
 			{"2024 年前端技术趋势预测", "随着 AI 的快速发展，前端领域也在不断变化。以下是我对 2024 年前端技术趋势的一些预测：\n\n1. AI 辅助开发将成为标配\n2. Server Components 会更加流行\n3. TypeScript 使用率继续上升\n4. Rust 在前端工具链中的应用会更广泛\n5. Web Components 可能会迎来第二春\n\n大家怎么看？欢迎讨论！", 10, 6, 89, 32, 1523},
 		}
 
+		// 插入测试话题
 		for _, t := range topics {
-			database.DB.Exec(`INSERT INTO topics (title, content, user_id, forum_id, like_count, reply_count, view_count, created_at, updated_at) 
+			if err := database.DB.Exec(`INSERT INTO topics (title, content, user_id, forum_id, like_count, reply_count, view_count, created_at, updated_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '-'||abs(random())%72||' hours'), datetime('now', '-'||abs(random())%72||' hours'))`,
-				t.Title, t.Content, t.UserID, t.ForumID, t.LikeCount, t.ReplyCount, t.ViewCount)
+				t.Title, t.Content, t.UserID, t.ForumID, t.LikeCount, t.ReplyCount, t.ViewCount).Error; err != nil {
+				log.Printf("failed to create topic: %s, error: %v", t.Title, err)
+			}
 		}
-		log.Println("Test topics created")
-
+		log.Println("test topics created")
 	}
 }
