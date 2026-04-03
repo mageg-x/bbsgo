@@ -18,15 +18,18 @@ type Response struct {
 // w: HTTP 响应写入器
 // data: 要返回的数据对象
 func Success(w http.ResponseWriter, data interface{}) {
+	log.Printf("Success: [DEBUG] start, data type=%T, data=%+v", data, data)
 	resp := Response{
 		Code:    0,
 		Message: "success",
 		Data:    data,
 	}
 	w.Header().Set("Content-Type", "application/json")
+	log.Printf("Success: [DEBUG] before Encode, resp=%+v", resp)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("encode response failed: %v", err)
 	}
+	log.Printf("Success: [DEBUG] after Encode")
 }
 
 // Error 返回错误响应

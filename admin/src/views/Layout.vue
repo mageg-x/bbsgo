@@ -48,6 +48,12 @@
             </span>
             <span class="menu-text">话题管理</span>
           </router-link>
+          <router-link to="polls" class="menu-item" :class="{ active: route.name === 'Polls' }">
+            <span class="menu-icon indigo">
+              <Vote :size="18" />
+            </span>
+            <span class="menu-text">投票管理</span>
+          </router-link>
         </div>
 
         <div class="menu-group">
@@ -115,6 +121,7 @@
             </div>
             <div class="user-details-header">
               <span class="user-name-header">{{ adminStore.user?.username }}</span>
+              <span class="user-role-header">{{ getRoleName(adminStore.user?.role) }}</span>
             </div>
           </div>
         </div>
@@ -135,7 +142,7 @@ import { useAdminStore } from '@/stores/admin'
 import api from '@/api'
 import {
   LayoutDashboard, User, Users, FolderOpen, FileText, MessageSquare,
-  Tag, AlertTriangle, Bell, Settings, Sliders, Key, LogOut, Calendar
+  Tag, AlertTriangle, Bell, Settings, Sliders, Key, LogOut, Calendar, Vote
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -143,6 +150,11 @@ const route = useRoute()
 const adminStore = useAdminStore()
 
 const reportCount = ref(0)
+
+function getRoleName(role) {
+  const roles = { 0: '普通用户', 1: '版主', 2: '管理员' }
+  return roles[role] || '未知'
+}
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('zh-CN', {
@@ -161,6 +173,7 @@ const pageTitle = computed(() => {
     'Topics': '帖子管理',
     'Posts': '评论管理',
     'Tags': '话题管理',
+    'Polls': '投票管理',
     'Reports': '举报管理',
     'Announcements': '公告管理',
     'Config': '网站配置',
@@ -295,6 +308,7 @@ onMounted(() => {
 .menu-icon.green { background: rgba(52, 211, 153, 0.2); color: #34d399; }
 .menu-icon.cyan { background: rgba(34, 211, 238, 0.2); color: #22d3ee; }
 .menu-icon.orange { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+.menu-icon.indigo { background: rgba(129, 140, 248, 0.2); color: #818cf8; }
 .menu-icon.red { background: rgba(248, 113, 113, 0.2); color: #f87171; }
 .menu-icon.yellow { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
 .menu-icon.teal { background: rgba(45, 212, 191, 0.2); color: #2dd4bf; }
@@ -397,6 +411,11 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 600;
   color: #1f2937;
+}
+
+.user-role-header {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .main-content {

@@ -1,19 +1,12 @@
 <template>
   <div>
     <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
-      <div class="h-48 bg-cover bg-center relative" :style="{ backgroundImage: `url(${user?.background || getUserBackground(user?.username)})` }">
+      <div class="h-48 bg-cover bg-center relative"
+        :style="{ backgroundImage: `url(${user?.background || getUserBackground(user?.username)})` }">
         <div class="flex justify-end p-4">
-          <input
-            ref="backgroundInput"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            @change="handleBackgroundUpload"
-          />
-          <button 
-            @click="$refs.backgroundInput.click()"
-            class="bg-white/90 px-3 py-1 rounded text-sm text-gray-600 hover:bg-white"
-          >
+          <input ref="backgroundInput" type="file" accept="image/*" class="hidden" @change="handleBackgroundUpload" />
+          <button @click="$refs.backgroundInput.click()"
+            class="bg-white/90 px-3 py-1 rounded text-sm text-gray-600 hover:bg-white">
             <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
@@ -26,38 +19,31 @@
       <div class="px-6 pb-6">
         <div class="flex items-end -mt-16">
           <div class="relative">
-            <img 
-              :src="getUserAvatar(user)" 
-              class="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gray-200"
-            >
-            <input
-              ref="avatarInput"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleAvatarUpload"
-            />
-            <button 
-              v-if="isCurrentUser"
-              @click="$refs.avatarInput.click()"
-              class="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-600 shadow-lg"
-            >
+            <img :src="getUserAvatar(user)" class="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gray-200">
+            <input ref="avatarInput" type="file" accept="image/*" class="hidden" @change="handleAvatarUpload" />
+            <button v-if="isCurrentUser" @click="$refs.avatarInput.click()"
+              class="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-blue-600 shadow-lg">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                </path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
             </button>
           </div>
           <div class="ml-4 mb-2 flex-1">
-            <h1 class="text-xl font-bold text-gray-900">{{ user?.nickname || user?.username || '用户名' }}</h1>
+            <h1 class="text-xl font-bold text-gray-900">{{ getUserDisplayName(user) }}</h1>
             <p class="text-gray-500 text-sm">{{ user?.signature || '这家伙很懒，什么都没留下...' }}</p>
           </div>
-          <div v-if="isCurrentUser" class="mb-2">
-            <button 
-              @click="openEditDialog"
-              class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600"
-            >
+          <div class="mb-2 flex gap-2">
+            <button v-if="isCurrentUser" @click="openEditDialog"
+              class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600">
               编辑资料
+            </button>
+            <button v-else-if="userStore.isLoggedIn" @click="sendMessage"
+              class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600">
+              发私信
             </button>
           </div>
         </div>
@@ -90,18 +76,14 @@
           <div class="bg-white rounded-lg shadow-sm p-4">
             <div class="flex justify-between items-center mb-4">
               <h3 class="font-medium text-gray-900">个人资料</h3>
-              <button 
-                v-if="isCurrentUser"
-                @click="openEditDialog"
-                class="text-blue-500 text-sm hover:underline"
-              >
+              <button v-if="isCurrentUser" @click="openEditDialog" class="text-blue-500 text-sm hover:underline">
                 编辑资料
               </button>
             </div>
             <div class="space-y-3">
               <div class="flex">
                 <span class="w-20 text-gray-500 text-sm">昵称</span>
-                <span class="text-gray-900 text-sm">{{ user?.nickname || user?.username }}</span>
+                <span class="text-gray-900 text-sm">{{ getUserDisplayName(user) }}</span>
               </div>
               <div class="flex">
                 <span class="w-20 text-gray-500 text-sm">签名</span>
@@ -109,7 +91,8 @@
               </div>
               <div class="flex">
                 <span class="w-20 text-gray-500 text-sm">主页</span>
-                <span class="text-blue-500 text-sm">{{ user?.intro ? user.intro : 'https://mlog.club/user/' + (user?.id || '') }}</span>
+                <span class="text-blue-500 text-sm">{{ user?.intro ? user.intro : 'https://mlog.club/user/' + (user?.id
+                  || '') }}</span>
               </div>
             </div>
           </div>
@@ -122,7 +105,8 @@
               <div v-for="follower in followers" :key="follower.id" class="flex items-center space-x-3">
                 <img :src="getUserAvatar(follower)" class="w-10 h-10 rounded-full bg-gray-200">
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-gray-900 truncate">{{ follower.nickname || follower.username }}</div>
+                  <div class="text-sm font-medium text-gray-900 truncate">{{ getUserDisplayName(follower) }}
+                  </div>
                   <div class="text-xs text-gray-400 truncate">{{ follower.signature || '这家伙很懒，什么都没留下' }}</div>
                 </div>
                 <button class="bg-blue-500 text-white text-xs px-3 py-1 rounded hover:bg-blue-600">+ 关注</button>
@@ -140,7 +124,7 @@
             <div v-if="userTopics.length > 0" class="space-y-4">
               <div v-for="topic in userTopics" :key="topic.id" class="border-b pb-4 last:border-b-0">
                 <div class="flex items-center justify-between mb-1">
-                  <span class="text-sm text-gray-500">{{ topic.user?.nickname || topic.user?.username }}</span>
+                  <span class="text-sm text-gray-500">{{ getUserDisplayName(topic.user) }}</span>
                   <span class="text-xs text-gray-400">{{ formatTime(topic.created_at) }}</span>
                 </div>
                 <router-link :to="`/topic/${topic.id}`" class="block">
@@ -163,25 +147,14 @@
       </div>
     </div>
 
-    <el-dialog
-      v-model="showEditDialog"
-      title="编辑资料"
-      width="500px"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="showEditDialog" title="编辑资料" width="500px" :close-on-click-modal="false">
       <el-form :model="editForm" label-width="80px">
         <el-form-item label="昵称">
           <el-input v-model="editForm.nickname" placeholder="请输入昵称" maxlength="20" show-word-limit />
         </el-form-item>
         <el-form-item label="签名">
-          <el-input 
-            v-model="editForm.signature" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入个性签名" 
-            maxlength="100"
-            show-word-limit
-          />
+          <el-input v-model="editForm.signature" type="textarea" :rows="3" placeholder="请输入个性签名" maxlength="100"
+            show-word-limit />
         </el-form-item>
         <el-form-item label="个人主页">
           <el-input v-model="editForm.intro" placeholder="请输入个人主页链接" />
@@ -202,6 +175,7 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import api from '@/api'
 import { uploadImage } from '@/utils/upload'
+import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -226,12 +200,12 @@ const isCurrentUser = computed(() => {
   return userStore.user?.id === parseInt(route.params.id)
 })
 
-function getUserAvatar(userData) {
-  if (userData?.avatar) {
-    return userData.avatar
-  }
-  const username = userData?.username || 'default'
-  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(username)}`
+function sendMessage() {
+  // 跳转到私信页面，并带上目标用户信息
+  router.push({
+    path: '/messages',
+    query: { userId: user.value.id, username: user.value.username }
+  })
 }
 
 function getUserBackground(username) {
@@ -338,16 +312,16 @@ function openEditDialog() {
 
 async function handleSaveProfile() {
   saving.value = true
-  
+
   try {
     await updateProfile(editForm.value)
     user.value = { ...user.value, ...editForm.value }
-    
+
     if (isCurrentUser.value) {
       userStore.user = { ...userStore.user, ...editForm.value }
       localStorage.setItem('user', JSON.stringify(userStore.user))
     }
-    
+
     showEditDialog.value = false
     ElMessage.success('资料更新成功')
   } catch (error) {

@@ -1,5 +1,23 @@
 <template>
   <div class="users-page">
+    <!-- 角色选择对话框 -->
+    <el-dialog v-model="roleDialogVisible" title="修改用户角色" width="400px" :close-on-click-modal="false">
+      <div class="role-dialog-content">
+        <p class="role-dialog-user">当前用户：<strong>{{ selectedUser?.username }}</strong></p>
+        <div class="role-options">
+          <el-radio-group v-model="selectedRole">
+            <el-radio :value="0" class="role-option">普通用户</el-radio>
+            <el-radio :value="1" class="role-option">版主</el-radio>
+            <el-radio :value="2" class="role-option">管理员</el-radio>
+          </el-radio-group>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmRoleChange">确定</el-button>
+      </template>
+    </el-dialog>
+
     <el-card class="main-card">
       <template #header>
         <div class="card-header">
@@ -109,6 +127,9 @@ const page = ref(1)
 const pageSize = 20
 const total = ref(0)
 const loading = ref(false)
+const roleDialogVisible = ref(false)
+const selectedUser = ref(null)
+const selectedRole = ref(0)
 
 function getRoleName(role) {
   const roles = { 0: '普通用户', 1: '版主', 2: '管理员' }
@@ -144,24 +165,22 @@ async function loadUsers() {
   }
 }
 
-async function editRole(user) {
-  try {
-    const { value: newRole } = await ElMessageBox.prompt('修改用户角色', '角色设置', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputValue: user.role,
-      inputType: 'number',
-      customClass: 'role-prompt'
-    })
+function editRole(user) {
+  selectedUser.value = user
+  selectedRole.value = user.role
+  roleDialogVisible.value = true
+}
 
-    await api.put(`/admin/users/${user.id}/role`, { role: parseInt(newRole) })
-    user.role = parseInt(newRole)
+async function confirmRoleChange() {
+  if (!selectedUser.value) return
+  try {
+    await api.put(`/admin/users/${selectedUser.value.id}/role`, { role: selectedRole.value })
+    selectedUser.value.role = selectedRole.value
     ElMessage.success('角色已更新')
+    roleDialogVisible.value = false
   } catch (e) {
-    if (e !== 'cancel') {
-      console.error('更新角色失败', e)
-      ElMessage.error('更新角色失败')
-    }
+    console.error('更新角色失败', e)
+    ElMessage.error('更新角色失败')
   }
 }
 
@@ -313,5 +332,32 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.role-dialog-content {
+  padding: 10px 0;
+}
+
+.role-dialog-user {
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.role-options {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.role-option {
+  display: block;
+  margin-bottom: 16px;
+  height: 32px;
+  line-height: 32px;
+}
+
+.role-option:last-child {
+  margin-bottom: 0;
 }
 </style>

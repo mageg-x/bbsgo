@@ -11,19 +11,28 @@ import (
 
 // GetConfigString 获取字符串类型的配置值
 func GetConfigString(key, defaultValue string) string {
+	log.Printf("GetConfigString: [DEBUG] start, key=%s, defaultValue=%s", key, defaultValue)
 	cacheKey := "config:" + key
 	if cached, ok := cache.Get(cacheKey); ok {
 		if val, ok := cached.(string); ok {
+			log.Printf("GetConfigString: [DEBUG] cache hit, key=%s, value=%s", key, val)
 			return val
 		}
+	}
+
+	if database.DB == nil {
+		log.Printf("GetConfigString: [DEBUG] database.DB is nil, returning default")
+		return defaultValue
 	}
 
 	var config models.SiteConfig
 	if err := database.DB.Where("key = ?", key).First(&config).Error; err == nil {
 		cache.Set(cacheKey, config.Value, 5*time.Minute)
+		log.Printf("GetConfigString: [DEBUG] db hit, key=%s, value=%s", key, config.Value)
 		return config.Value
 	}
 
+	log.Printf("GetConfigString: [DEBUG] not found, key=%s, returning default=%s", key, defaultValue)
 	return defaultValue
 }
 

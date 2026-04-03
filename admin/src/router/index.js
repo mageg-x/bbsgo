@@ -13,7 +13,7 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       {
-        path: "/",
+        path: "",
         name: "Dashboard",
         component: () => import("@/views/Dashboard.vue"),
       },
@@ -41,6 +41,11 @@ const routes = [
         path: "/tags",
         name: "Tags",
         component: () => import("@/views/Tags.vue"),
+      },
+      {
+        path: "/polls",
+        name: "Polls",
+        component: () => import("@/views/Polls.vue"),
       },
       {
         path: "/reports",

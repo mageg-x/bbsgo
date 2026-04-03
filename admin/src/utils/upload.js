@@ -29,6 +29,14 @@ uploadApi.interceptors.request.use((config) => {
   return config
 })
 
+uploadApi.interceptors.response.use((response) => {
+  const res = response.data
+  if (res && res.code === 0 && res.data && res.data.url) {
+    return res.data
+  }
+  return response
+})
+
 /**
  * 计算文件的 SHA-256 哈希值
  * @param {File} file 文件对象

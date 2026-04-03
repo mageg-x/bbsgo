@@ -8,6 +8,7 @@ export const useConfigStore = defineStore('config', () => {
     allow_register: true,
     allow_post: true,
     allow_comment: true,
+    allow_poll: true,
     credit_topic: 20,
     credit_post: 5,
     credit_signin: 10,
@@ -33,6 +34,7 @@ export const useConfigStore = defineStore('config', () => {
         state.allow_register = parseBool(res.allow_register, true)
         state.allow_post = parseBool(res.allow_post, true)
         state.allow_comment = parseBool(res.allow_comment, true)
+        state.allow_poll = parseBool(res.allow_poll, true)
         state.credit_topic = parseInt(res.credit_topic) || 20
         state.credit_post = parseInt(res.credit_post) || 5
         state.credit_signin = parseInt(res.credit_signin) || 10

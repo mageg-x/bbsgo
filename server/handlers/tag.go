@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
 // GetTags 获取热门标签列表处理器
@@ -88,18 +89,21 @@ func GetOrCreateTagByName(name string) (*models.Tag, error) {
 		return nil, nil
 	}
 
-	tag := new(models.Tag) // 分配在堆上，避免返回指向局部变量的指针
-	if err := database.DB.Where("name = ?", name).First(tag).Error; err != nil {
-		// 标签不存在，创建新标签
-		tag.Name = name
-		tag.UsageCount = 0
-		tag.IsOfficial = false
-		tag.IsBanned = false
-		if err := database.DB.Create(tag).Error; err != nil {
-			log.Printf("get or create tag: failed to create tag, name: %s, error: %v", name, err)
-			return nil, err
-		}
+	tag := &models.Tag{
+		Name:       name,
+		UsageCount: 0,
+		IsOfficial: false,
+		IsBanned:   false,
 	}
+
+	// 使用 FirstOrCreate 确保原子性操作
+	result := database.DB.Where("name = ?", name).FirstOrCreate(tag)
+	if result.Error != nil {
+		log.Printf("get or create tag: failed to get or create tag, name: %s, error: %v", name, result.Error)
+		return nil, result.Error
+	}
+
+	log.Printf("get or create tag: success, name: %s, id: %d", name, tag.ID)
 	return tag, nil
 }
 
@@ -107,7 +111,7 @@ func GetOrCreateTagByName(name string) (*models.Tag, error) {
 // tagID: 标签ID
 func IncrementTagUsage(tagID uint) {
 	if err := database.DB.Model(&models.Tag{}).Where("id = ?", tagID).
-		UpdateColumn("usage_count", database.DB.Raw("usage_count + 1")).Error; err != nil {
+		UpdateColumn("usage_count", gorm.Expr("usage_count + 1")).Error; err != nil {
 		log.Printf("increment tag usage: failed to increment usage count, tagID: %d, error: %v", tagID, err)
 	}
 }

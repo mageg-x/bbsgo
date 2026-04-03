@@ -17,8 +17,16 @@ func (s IntSlice) Value() (driver.Value, error) {
 
 // Scan 实现 sql.Scanner 接口，从数据库读取 JSON 数据并转换为 IntSlice
 func (s *IntSlice) Scan(value interface{}) error {
+	if value == nil {
+		*s = nil
+		return nil
+	}
 	bytes, ok := value.([]byte)
 	if !ok {
+		return nil
+	}
+	if len(bytes) == 0 {
+		*s = nil
 		return nil
 	}
 	return json.Unmarshal(bytes, s)

@@ -1,13 +1,14 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-    <div v-if="!configStore.state.allow_register" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+    <div v-if="!configStore.state.allow_register"
+      class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
       <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
       </svg>
       <h2 class="text-2xl font-bold text-gray-900 mb-2">注册功能已关闭</h2>
       <p class="text-gray-500 mb-6">管理员暂时关闭了注册功能，请稍后再试。</p>
-      <router-link to="/login" 
+      <router-link to="/login"
         class="inline-block w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium">
         返回登录
       </router-link>
@@ -21,54 +22,33 @@
       <form @submit.prevent="handleRegister" class="space-y-5">
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">用户名</label>
-          <input
-            type="text"
-            v-model="form.username"
+          <input type="text" v-model="form.username"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="请输入用户名"
-            required
-          />
+            placeholder="请输入用户名" required />
         </div>
 
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">昵称</label>
-          <input
-            type="text"
-            v-model="form.nickname"
+          <input type="text" v-model="form.nickname"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="请输入昵称"
-            required
-          />
+            placeholder="请输入昵称" required />
         </div>
 
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">邮箱</label>
-          <input
-            type="email"
-            v-model="form.email"
+          <input type="email" v-model="form.email"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="请输入邮箱"
-            required
-          />
+            placeholder="请输入邮箱" required />
         </div>
 
         <div v-if="emailEnabled">
           <label class="block text-gray-700 text-sm font-medium mb-2">验证码</label>
           <div class="flex gap-3">
-            <input
-              type="text"
-              v-model="form.code"
+            <input type="text" v-model="form.code"
               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="请输入验证码"
-              maxlength="6"
-              required
-            />
-            <button
-              type="button"
-              @click="sendCode"
-              :disabled="countdown > 0 || !form.email"
-              class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-            >
+              placeholder="请输入验证码" maxlength="6" required />
+            <button type="button" @click="sendCode" :disabled="countdown > 0 || !form.email"
+              class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
               {{ countdown > 0 ? `${countdown}秒后重试` : '发送验证码' }}
             </button>
           </div>
@@ -76,31 +56,20 @@
 
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">密码</label>
-          <input
-            type="password"
-            v-model="form.password"
+          <input type="password" v-model="form.password"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="请输入密码"
-            required
-          />
+            placeholder="请输入密码" required />
         </div>
 
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">确认密码</label>
-          <input
-            type="password"
-            v-model="form.confirm_password"
+          <input type="password" v-model="form.confirm_password"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="请再次输入密码"
-            required
-          />
+            placeholder="请再次输入密码" required />
         </div>
 
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button type="submit" :disabled="loading"
+          class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
           {{ loading ? '注册中...' : '注册' }}
         </button>
       </form>

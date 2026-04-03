@@ -108,6 +108,14 @@ func GetTopic(w http.ResponseWriter, r *http.Request) {
 // CreateTopic 创建话题处理器
 // 需要用户登录
 func CreateTopic(w http.ResponseWriter, r *http.Request) {
+	// 添加 recover 捕获 panic
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("CreateTopic PANIC: %v", err)
+			utils.Error(w, 500, "服务器内部错误")
+		}
+	}()
+
 	// 验证用户登录
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -156,7 +164,8 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 		Content:      req.Content,
 		UserID:       userID,
 		ForumID:      req.ForumID,
-		AllowComment: true, // 默认允许评论
+		AllowComment: true,           // 默认允许评论
+		Tags:         []models.Tag{}, // 初始化 Tags 为空切片，避免 nil 导致的空指针异常
 	}
 
 	if err := database.DB.Create(&topic).Error; err != nil {
@@ -185,11 +194,12 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 				log.Printf("create topic: tag is banned, name: %s", name)
 				continue
 			}
-			tags = append(tags, *tag)
+			// 只保留 ID，避免 GORM 尝试插入完整对象
+			tags = append(tags, models.Tag{ID: tag.ID})
 			IncrementTagUsage(tag.ID)
 		}
 		if len(tags) > 0 {
-			if err := database.DB.Model(&topic).Association("Tags").Replace(tags).Error; err != nil {
+			if err := database.DB.Model(&topic).Association("Tags").Replace(tags); err != nil {
 				log.Printf("create topic: failed to associate tags, topicID: %d, error: %v", topic.ID, err)
 			}
 		}
@@ -198,7 +208,9 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	// 给发帖用户增加积分
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err == nil {
+		log.Printf("create topic: [DEBUG] before GetConfigInt, database.DB=%v", database.DB != nil)
 		creditAmount := utils.GetConfigInt("credit_topic", 20)
+		log.Printf("create topic: [DEBUG] after GetConfigInt, creditAmount=%d", creditAmount)
 		user.Credits += creditAmount
 		if err := database.DB.Save(&user).Error; err != nil {
 			log.Printf("create topic: failed to add credits, userID: %d, error: %v", userID, err)
@@ -206,12 +218,20 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 重新加载话题关联数据
+	log.Printf("create topic: [DEBUG] before Preload, topic.ID=%d", topic.ID)
 	if err := database.DB.Preload("User").Preload("Forum").Preload("Tags").First(&topic, topic.ID).Error; err != nil {
 		log.Printf("create topic: failed to reload topic, id: %d, error: %v", topic.ID, err)
 	}
+	log.Printf("create topic: [DEBUG] after Preload, topic.ID=%d", topic.ID)
 
-	log.Printf("create topic: topic created successfully, id: %d, userID: %d", topic.ID, userID)
+	// 确保 Tags 不为 nil
+	if topic.Tags == nil {
+		topic.Tags = []models.Tag{}
+	}
+
+	log.Printf("create topic: [DEBUG] before Success, w=%v, topic=%+v", w != nil, topic)
 	utils.Success(w, topic)
+	log.Printf("create topic: [DEBUG] after Success")
 }
 
 // UpdateTopic 更新话题处理器

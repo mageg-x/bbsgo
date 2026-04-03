@@ -38,6 +38,13 @@
               </div>
               <el-switch v-model="settings.allow_comment" />
             </div>
+            <div class="switch-item">
+              <div class="switch-info">
+                <span class="switch-label">允许发起投票</span>
+                <span class="switch-desc">控制是否允许用户发布投票</span>
+              </div>
+              <el-switch v-model="settings.allow_poll" />
+            </div>
           </div>
         </div>
 
@@ -87,6 +94,7 @@ const settings = ref({
   allow_register: true,
   allow_post: true,
   allow_comment: true,
+  allow_poll: true,
   credits_topic: 10,
   credits_post: 5,
   credits_signin: 10
@@ -102,6 +110,7 @@ async function loadSettings() {
       allow_register: config.allow_register !== 'false',
       allow_post: config.allow_post !== 'false',
       allow_comment: config.allow_comment !== 'false',
+      allow_poll: config.allow_poll !== 'false',
       credits_topic: parseInt(config.credit_topic) || 10,
       credits_post: parseInt(config.credit_post) || 5,
       credits_signin: parseInt(config.credit_signin) || 10
@@ -122,6 +131,7 @@ async function saveSettings() {
       allow_register: settings.value.allow_register ? 'true' : 'false',
       allow_post: settings.value.allow_post ? 'true' : 'false',
       allow_comment: settings.value.allow_comment ? 'true' : 'false',
+      allow_poll: settings.value.allow_poll ? 'true' : 'false',
       credit_topic: String(settings.value.credits_topic),
       credit_post: String(settings.value.credits_post),
       credit_signin: String(settings.value.credits_signin)

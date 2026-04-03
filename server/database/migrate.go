@@ -27,6 +27,9 @@ func AutoMigrate() {
 		&models.Draft{},            // 草稿箱表
 		&models.Announcement{},     // 公告表
 		&models.VerificationCode{}, // 验证码表
+		&models.Poll{},             // 投票表
+		&models.PollOption{},       // 投票选项表
+		&models.PollVote{},         // 投票记录表
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)

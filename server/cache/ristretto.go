@@ -37,6 +37,9 @@ func Init() {
 // value: 缓存值
 // ttl: 过期时间
 func Set(key string, value interface{}, ttl time.Duration) {
+	if Cache == nil {
+		return
+	}
 	// SetWithTTL 设置缓存项，第三个参数 1 表示成本
 	Cache.SetWithTTL(key, value, 1, ttl)
 }
@@ -45,12 +48,21 @@ func Set(key string, value interface{}, ttl time.Duration) {
 // key: 缓存键
 // 返回: 缓存值和是否存在
 func Get(key string) (interface{}, bool) {
-	return Cache.Get(key)
+	if Cache == nil {
+		log.Printf("cache.Get: [DEBUG] Cache is nil, key=%s", key)
+		return nil, false
+	}
+	val, ok := Cache.Get(key)
+	log.Printf("cache.Get: [DEBUG] key=%s, found=%v", key, ok)
+	return val, ok
 }
 
 // Delete 删除缓存
 // key: 缓存键
 func Delete(key string) {
+	if Cache == nil {
+		return
+	}
 	Cache.Del(key)
 }
 

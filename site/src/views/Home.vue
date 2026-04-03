@@ -5,10 +5,8 @@
         <div class="px-4 py-3 border-b bg-gray-50">
           <h3 class="font-semibold text-gray-700">热门话题</h3>
         </div>
-        <router-link v-for="tag in tags" :key="tag.id"
-          :to="tag.id ? `/?tag=${tag.id}` : '/'"
-          :class="['px-4 py-3 flex items-center justify-between transition-colors',
-            currentTagId === tag.id ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50']">
+        <router-link v-for="tag in tags" :key="tag.id" :to="tag.id ? `/?tag=${tag.id}` : '/'" :class="['px-4 py-3 flex items-center justify-between transition-colors',
+          currentTagId === tag.id ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50']">
           <div class="flex items-center space-x-2">
             <span v-if="tag.icon" class="text-lg">{{ tag.icon }}</span>
             <span class="font-medium">{{ tag.name }}</span>
@@ -19,13 +17,14 @@
     </aside>
     <div class="flex-1 min-w-0">
       <div v-if="announcements.length > 0" class="mb-4">
-        <div v-for="announcement in announcements" :key="announcement.id" 
+        <div v-for="announcement in announcements" :key="announcement.id"
           class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-2">
           <div class="flex items-start">
             <div class="flex-shrink-0">
               <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
+                </path>
               </svg>
             </div>
             <div class="ml-3 flex-1">
@@ -40,13 +39,13 @@
           class="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
           <div class="flex space-x-4">
             <router-link :to="`/user/${topic.user_id}`">
-              <img :src="topic.user?.avatar || 'https://via.placeholder.com/48'" class="w-12 h-12 rounded-full">
+              <img :src="getUserAvatar(topic.user)" class="w-12 h-12 rounded-full">
             </router-link>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center space-x-2">
                   <router-link :to="`/user/${topic.user_id}`" class="font-medium text-gray-900 hover:text-blue-500">
-                    {{ topic.user?.nickname || topic.user?.username }}
+                    {{ getUserDisplayName(topic.user) }}
                   </router-link>
                   <span v-if="topic.forum" class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
                     {{ topic.forum.name }}
@@ -61,15 +60,16 @@
                 <p class="text-gray-600 text-sm mb-3 line-clamp-3" v-html="topic.content.substring(0, 200)"></p>
               </router-link>
               <div class="flex items-center flex-wrap gap-2 mb-2" v-if="topic.tags && topic.tags.length > 0">
-                <router-link v-for="tag in topic.tags" :key="tag.id"
-                  :to="`/?tag=${tag.id}`"
+                <router-link v-for="tag in topic.tags" :key="tag.id" :to="`/?tag=${tag.id}`"
                   class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded hover:bg-blue-100 hover:text-blue-600">
                   #{{ tag.name }}
                 </router-link>
               </div>
               <div class="flex items-center space-x-6 text-sm text-gray-500">
-                <button @click="toggleLike(topic)" :class="['flex items-center space-x-1 transition-colors', topic.liked ? 'text-red-500' : 'hover:text-red-500']">
-                  <svg class="w-4 h-4" :fill="topic.liked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
+                <button @click="toggleLike(topic)"
+                  :class="['flex items-center space-x-1 transition-colors', topic.liked ? 'text-red-500' : 'hover:text-red-500']">
+                  <svg class="w-4 h-4" :fill="topic.liked ? 'currentColor' : 'none'" stroke="currentColor"
+                    viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
                     </path>
@@ -98,12 +98,14 @@
             </div>
           </div>
         </div>
-        
+
         <div ref="loadMoreTrigger" class="py-8 text-center">
           <div v-if="loading" class="flex items-center justify-center space-x-2">
             <svg class="animate-spin w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
             </svg>
             <span class="text-gray-500">加载中...</span>
           </div>
@@ -117,13 +119,13 @@
       <div class="bg-white rounded-lg shadow-sm p-3 mb-4" v-if="userStore.isLoggedIn">
         <h3 class="font-semibold text-gray-900 mb-2 text-sm">签到</h3>
         <div class="text-center">
-          <div class="text-2xl font-bold text-gray-800 mb-1">{{ signInStatus.credits || userStore.user?.credits || 0 }}</div>
+          <div class="text-2xl font-bold text-gray-800 mb-1">{{ signInStatus.credits || userStore.user?.credits || 0 }}
+          </div>
           <div class="text-xs text-gray-500 mb-2">积分</div>
-          <button @click="handleSignIn" :disabled="signInLoading || signInStatus.signed_today"
-            :class="['w-full py-1.5 rounded-lg text-sm font-medium transition-colors', 
-              signInStatus.signed_today 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-500 text-white hover:bg-blue-600']">
+          <button @click="handleSignIn" :disabled="signInLoading || signInStatus.signed_today" :class="['w-full py-1.5 rounded-lg text-sm font-medium transition-colors',
+            signInStatus.signed_today
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-500 text-white hover:bg-blue-600']">
             {{ signInLoading ? '签到中...' : (signInStatus.signed_today ? '今日已签到' : '立即签到') }}
           </button>
           <div v-if="signInStatus.last_sign_at" class="mt-2 text-xs text-gray-500">
@@ -143,13 +145,14 @@
       <div class="bg-white rounded-lg shadow-sm p-4">
         <h3 class="font-semibold text-gray-900 mb-3">活跃用户</h3>
         <div class="space-y-3">
-          <div v-for="(user, index) in creditUsers" :key="user.id" class="flex items-center justify-between">
+          <router-link v-for="(user, index) in creditUsers" :key="user.id" :to="`/user/${user.id}`"
+            class="flex items-center justify-between hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors">
             <div class="flex items-center space-x-2">
-              <img :src="user.avatar || 'https://via.placeholder.com/24'" class="w-6 h-6 rounded-full">
-              <span class="text-sm text-gray-700">{{ user.nickname || user.username }}</span>
+              <img :src="getUserAvatar(user)" class="w-6 h-6 rounded-full">
+              <span class="text-sm text-gray-700">{{ getUserDisplayName(user) }}</span>
             </div>
             <span class="text-xs font-medium text-gray-600">{{ user.credits }}</span>
-          </div>
+          </router-link>
         </div>
       </div>
     </aside>
@@ -163,6 +166,7 @@ import { useIntersectionObserver } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
 import { useUserStore } from '@/stores/user'
+import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -217,9 +221,9 @@ async function loadTags() {
 
 async function loadTopics(isLoadMore = false) {
   if (loading.value || noMore.value) return
-  
+
   loading.value = true
-  
+
   try {
     const params = {
       page: page.value,
@@ -232,15 +236,15 @@ async function loadTopics(isLoadMore = false) {
       params.tag_id = currentTagId.value
     }
     const res = await api.get('/topics', { params })
-    
+
     if (isLoadMore) {
       topics.value = [...topics.value, ...(res.list || [])]
     } else {
       topics.value = res.list || []
     }
-    
+
     total.value = res.total || 0
-    
+
     if (topics.value.length >= total.value) {
       noMore.value = true
     }
@@ -366,16 +370,16 @@ async function handleSignIn() {
 
 function getStreakDays() {
   if (!signInStatus.value.last_sign_at) return 0
-  
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  
+
   const lastSignDate = new Date(signInStatus.value.last_sign_at)
   lastSignDate.setHours(0, 0, 0, 0)
-  
+
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
-  
+
   if (lastSignDate.getTime() === today.getTime() || lastSignDate.getTime() === yesterday.getTime()) {
     return 1
   }

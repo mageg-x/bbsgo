@@ -28,86 +28,91 @@ func SetupRoutes() *mux.Router {
 	// ========== 公开接口（无需认证）==========
 
 	// 用户注册和登录
-	api.HandleFunc("/register", handlers.RegisterWithCode).Methods("POST")            // 邮箱注册
-	api.HandleFunc("/send-code", handlers.SendVerificationCode).Methods("POST")       // 发送验证码
-	api.HandleFunc("/login", handlers.Login).Methods("POST")                         // 登录
+	api.HandleFunc("/register", handlers.RegisterWithCode).Methods("POST")      // 邮箱注册
+	api.HandleFunc("/send-code", handlers.SendVerificationCode).Methods("POST") // 发送验证码
+	api.HandleFunc("/login", handlers.Login).Methods("POST")                    // 登录
 
 	// 公开内容获取
-	api.HandleFunc("/forums", handlers.GetForums).Methods("GET")                     // 获取版块列表
+	api.HandleFunc("/forums", handlers.GetForums).Methods("GET")                      // 获取版块列表
 	api.HandleFunc("/config", handlers.GetSiteConfig).Methods("GET")                  // 获取网站配置
 	api.HandleFunc("/topics", handlers.GetTopics).Methods("GET")                      // 获取话题列表
 	api.HandleFunc("/topics/{id}", handlers.GetTopic).Methods("GET")                  // 获取话题详情
 	api.HandleFunc("/topics/{id}/posts", handlers.GetPosts).Methods("GET")            // 获取话题回复
-	api.HandleFunc("/tags", handlers.GetTags).Methods("GET")                         // 获取标签列表
+	api.HandleFunc("/tags", handlers.GetTags).Methods("GET")                          // 获取标签列表
 	api.HandleFunc("/tags/search", handlers.SearchTags).Methods("GET")                // 搜索标签
-	api.HandleFunc("/tags/{id}", handlers.GetTag).Methods("GET")                     // 获取标签详情
-	api.HandleFunc("/announcements", handlers.GetAnnouncements).Methods("GET")         // 获取公告列表
-	api.HandleFunc("/users/credit", handlers.GetCreditUsers).Methods("GET")          // 获取积分排行
-	api.HandleFunc("/users/{id}", handlers.GetUser).Methods("GET")                   // 获取用户公开信息
-	api.HandleFunc("/users/{id}/stats", handlers.GetUserStats).Methods("GET")       // 获取用户统计
+	api.HandleFunc("/tags/{id}", handlers.GetTag).Methods("GET")                      // 获取标签详情
+	api.HandleFunc("/announcements", handlers.GetAnnouncements).Methods("GET")        // 获取公告列表
+	api.HandleFunc("/users/credit", handlers.GetCreditUsers).Methods("GET")           // 获取积分排行
+	api.HandleFunc("/users/search", handlers.SearchUsers).Methods("GET")              // 搜索用户
+	api.HandleFunc("/users/{id}", handlers.GetUser).Methods("GET")                    // 获取用户公开信息
+	api.HandleFunc("/users/{id}/stats", handlers.GetUserStats).Methods("GET")         // 获取用户统计
 	api.HandleFunc("/users/{id}/followers", handlers.GetUserFollowers).Methods("GET") // 获取用户粉丝
-	api.HandleFunc("/users/{id}/topics", handlers.GetUserTopics).Methods("GET")     // 获取用户话题
-	api.HandleFunc("/search", handlers.Search).Methods("GET")                        // 搜索
+	api.HandleFunc("/users/{id}/topics", handlers.GetUserTopics).Methods("GET")       // 获取用户话题
+	api.HandleFunc("/search", handlers.Search).Methods("GET")                         // 搜索
+
+	// 投票公开接口
+	api.HandleFunc("/polls/{id}", handlers.GetPoll).Methods("GET")                    // 获取投票详情
+	api.HandleFunc("/topics/{topic_id}/poll", handlers.GetPollByTopic).Methods("GET") // 根据话题获取投票
 
 	// ========== 认证接口（需要登录）==========
 	auth := api.PathPrefix("").Subrouter()
 	auth.Use(middleware.Auth) // 应用认证中间件
 
 	// 用户个人资料
-	auth.HandleFunc("/user/profile", handlers.GetProfile).Methods("GET")           // 获取个人资料
-	auth.HandleFunc("/user/profile", handlers.UpdateProfile).Methods("PUT")       // 更新个人资料
-	auth.HandleFunc("/user/topics", handlers.GetCurrentUserTopics).Methods("GET") // 获取我的话题
-	auth.HandleFunc("/user/signin", handlers.SignIn).Methods("POST")             // 签到
+	auth.HandleFunc("/user/profile", handlers.GetProfile).Methods("GET")            // 获取个人资料
+	auth.HandleFunc("/user/profile", handlers.UpdateProfile).Methods("PUT")         // 更新个人资料
+	auth.HandleFunc("/user/topics", handlers.GetCurrentUserTopics).Methods("GET")   // 获取我的话题
+	auth.HandleFunc("/user/signin", handlers.SignIn).Methods("POST")                // 签到
 	auth.HandleFunc("/user/signin/status", handlers.GetSignInStatus).Methods("GET") // 签到状态
-	auth.HandleFunc("/user/favorites", handlers.GetFavorites).Methods("GET")    // 获取收藏列表
-	auth.HandleFunc("/user/follows", handlers.GetFollows).Methods("GET")          // 获取关注列表
-	auth.HandleFunc("/user/followers", handlers.GetFollowers).Methods("GET")    // 获取粉丝列表
-	auth.HandleFunc("/user/badges", handlers.GetUserBadges).Methods("GET")       // 获取用户勋章
-	auth.HandleFunc("/user/reports", handlers.GetUserReports).Methods("GET")    // 获取我的举报
+	auth.HandleFunc("/user/favorites", handlers.GetFavorites).Methods("GET")        // 获取收藏列表
+	auth.HandleFunc("/user/follows", handlers.GetFollows).Methods("GET")            // 获取关注列表
+	auth.HandleFunc("/user/followers", handlers.GetFollowers).Methods("GET")        // 获取粉丝列表
+	auth.HandleFunc("/user/badges", handlers.GetUserBadges).Methods("GET")          // 获取用户勋章
+	auth.HandleFunc("/user/reports", handlers.GetUserReports).Methods("GET")        // 获取我的举报
 
 	// 话题操作
-	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")             // 创建话题
-	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")        // 更新话题
-	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")      // 删除话题
+	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")        // 创建话题
+	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")    // 更新话题
+	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE") // 删除话题
 
 	// 回复操作
 	auth.HandleFunc("/topics/{id}/posts", handlers.CreatePost).Methods("POST") // 创建回复
-	auth.HandleFunc("/posts/{id}", handlers.UpdatePost).Methods("PUT")          // 更新回复
-	auth.HandleFunc("/posts/{id}", handlers.DeletePost).Methods("DELETE")       // 删除回复
+	auth.HandleFunc("/posts/{id}", handlers.UpdatePost).Methods("PUT")         // 更新回复
+	auth.HandleFunc("/posts/{id}", handlers.DeletePost).Methods("DELETE")      // 删除回复
 
 	// 点赞操作
-	auth.HandleFunc("/likes", handlers.CreateLike).Methods("POST")   // 创建点赞
-	auth.HandleFunc("/likes", handlers.DeleteLike).Methods("DELETE") // 删除点赞
+	auth.HandleFunc("/likes", handlers.CreateLike).Methods("POST")      // 创建点赞
+	auth.HandleFunc("/likes", handlers.DeleteLike).Methods("DELETE")    // 删除点赞
 	auth.HandleFunc("/likes/check", handlers.CheckLike).Methods("POST") // 检查点赞状态
 
 	// 收藏操作
-	auth.HandleFunc("/favorites", handlers.CreateFavorite).Methods("POST")   // 创建收藏
-	auth.HandleFunc("/favorites", handlers.DeleteFavorite).Methods("DELETE")  // 删除收藏
+	auth.HandleFunc("/favorites", handlers.CreateFavorite).Methods("POST")      // 创建收藏
+	auth.HandleFunc("/favorites", handlers.DeleteFavorite).Methods("DELETE")    // 删除收藏
 	auth.HandleFunc("/favorites/check", handlers.CheckFavorite).Methods("POST") // 检查收藏状态
 
 	// 关注操作
-	auth.HandleFunc("/follows", handlers.CreateFollow).Methods("POST")   // 创建关注
-	auth.HandleFunc("/follows", handlers.DeleteFollow).Methods("DELETE")  // 删除关注
+	auth.HandleFunc("/follows", handlers.CreateFollow).Methods("POST")     // 创建关注
+	auth.HandleFunc("/follows", handlers.DeleteFollow).Methods("DELETE")   // 删除关注
 	auth.HandleFunc("/follows/check", handlers.CheckFollow).Methods("GET") // 检查关注状态
 
 	// 私信操作
-	auth.HandleFunc("/messages", handlers.GetMessages).Methods("GET")                        // 获取私信列表
-	auth.HandleFunc("/messages", handlers.SendMessage).Methods("POST")                       // 发送私信
-	auth.HandleFunc("/messages/unread-count", handlers.GetUnreadMessageCount).Methods("GET") // 未读数量
-	auth.HandleFunc("/messages/read", handlers.MarkMessagesRead).Methods("PUT")               // 标记已读
+	auth.HandleFunc("/messages", handlers.GetMessages).Methods("GET")                           // 获取私信列表
+	auth.HandleFunc("/messages", handlers.SendMessage).Methods("POST")                          // 发送私信
+	auth.HandleFunc("/messages/unread-count", handlers.GetUnreadMessageCount).Methods("GET")    // 未读数量
+	auth.HandleFunc("/messages/read", handlers.MarkMessagesRead).Methods("PUT")                 // 标记已读
 	auth.HandleFunc("/messages/with/{user_id}", handlers.GetMessageConversation).Methods("GET") // 会话详情
 
 	// 通知操作
-	auth.HandleFunc("/notifications", handlers.GetNotifications).Methods("GET")                      // 获取通知列表
+	auth.HandleFunc("/notifications", handlers.GetNotifications).Methods("GET")                        // 获取通知列表
 	auth.HandleFunc("/notifications/unread-count", handlers.GetUnreadNotificationCount).Methods("GET") // 未读数量
-	auth.HandleFunc("/notifications/read-all", handlers.MarkAllNotificationsRead).Methods("PUT")     // 全部已读
+	auth.HandleFunc("/notifications/read-all", handlers.MarkAllNotificationsRead).Methods("PUT")       // 全部已读
 
 	// 草稿箱操作
-	auth.HandleFunc("/drafts", handlers.GetDrafts).Methods("GET")                    // 获取草稿列表
-	auth.HandleFunc("/drafts", handlers.CreateDraft).Methods("POST")                 // 创建草稿
-	auth.HandleFunc("/drafts/{id}", handlers.GetDraft).Methods("GET")                // 获取草稿详情
-	auth.HandleFunc("/drafts/{id}", handlers.UpdateDraft).Methods("PUT")              // 更新草稿
-	auth.HandleFunc("/drafts/{id}", handlers.DeleteDraft).Methods("DELETE")           // 删除草稿
+	auth.HandleFunc("/drafts", handlers.GetDrafts).Methods("GET")           // 获取草稿列表
+	auth.HandleFunc("/drafts", handlers.CreateDraft).Methods("POST")        // 创建草稿
+	auth.HandleFunc("/drafts/{id}", handlers.GetDraft).Methods("GET")       // 获取草稿详情
+	auth.HandleFunc("/drafts/{id}", handlers.UpdateDraft).Methods("PUT")    // 更新草稿
+	auth.HandleFunc("/drafts/{id}", handlers.DeleteDraft).Methods("DELETE") // 删除草稿
 
 	// 举报操作
 	auth.HandleFunc("/reports", handlers.CreateReport).Methods("POST") // 创建举报
@@ -116,48 +121,52 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/badges", handlers.GetBadges).Methods("GET") // 获取勋章列表
 
 	// 文件上传
-	auth.HandleFunc("/upload", handlers.UploadFile).Methods("POST")                      // 上传文件
+	auth.HandleFunc("/upload", handlers.UploadFile).Methods("POST")           // 上传文件
 	auth.HandleFunc("/upload/check", handlers.CheckFileExists).Methods("GET") // 检查文件是否存在（秒传）
+
+	// 投票操作
+	auth.HandleFunc("/polls", handlers.CreatePoll).Methods("POST")      // 创建投票
+	auth.HandleFunc("/polls/vote", handlers.SubmitVote).Methods("POST") // 提交投票
 
 	// ========== 管理后台接口（需要管理员权限）==========
 	admin := api.PathPrefix("/admin").Subrouter()
-	admin.Use(middleware.Auth)       // 认证中间件
-	admin.Use(middleware.AdminAuth)  // 管理员权限中间件
+	admin.Use(middleware.Auth)      // 认证中间件
+	admin.Use(middleware.AdminAuth) // 管理员权限中间件
 
 	// 用户管理
-	admin.HandleFunc("/users", handlers.GetAdminUsers).Methods("GET")              // 获取用户列表
-	admin.HandleFunc("/users/{id}/role", handlers.UpdateUserRole).Methods("PUT")   // 更新用户角色
-	admin.HandleFunc("/users/{id}/ban", handlers.BanUser).Methods("PUT")            // 封禁用户
-	admin.HandleFunc("/users/{id}", handlers.DeleteUser).Methods("DELETE")          // 删除用户
+	admin.HandleFunc("/users", handlers.GetAdminUsers).Methods("GET")            // 获取用户列表
+	admin.HandleFunc("/users/{id}/role", handlers.UpdateUserRole).Methods("PUT") // 更新用户角色
+	admin.HandleFunc("/users/{id}/ban", handlers.BanUser).Methods("PUT")         // 封禁用户
+	admin.HandleFunc("/users/{id}", handlers.DeleteUser).Methods("DELETE")       // 删除用户
 
 	// 版块管理
-	admin.HandleFunc("/forums", handlers.CreateForum).Methods("POST")             // 创建版块
-	admin.HandleFunc("/forums/{id}", handlers.UpdateForum).Methods("PUT")          // 更新版块
-	admin.HandleFunc("/forums/{id}", handlers.DeleteForum).Methods("DELETE")       // 删除版块
+	admin.HandleFunc("/forums", handlers.CreateForum).Methods("POST")        // 创建版块
+	admin.HandleFunc("/forums/{id}", handlers.UpdateForum).Methods("PUT")    // 更新版块
+	admin.HandleFunc("/forums/{id}", handlers.DeleteForum).Methods("DELETE") // 删除版块
 
 	// 标签管理
-	admin.HandleFunc("/tags", handlers.GetAdminTags).Methods("GET")                // 获取标签列表
-	admin.HandleFunc("/tags", handlers.CreateTag).Methods("POST")                 // 创建标签
-	admin.HandleFunc("/tags/merge", handlers.MergeTags).Methods("POST")          // 合并标签
-	admin.HandleFunc("/tags/{id}", handlers.UpdateTag).Methods("PUT")              // 更新标签
-	admin.HandleFunc("/tags/{id}", handlers.DeleteTag).Methods("DELETE")          // 删除标签
+	admin.HandleFunc("/tags", handlers.GetAdminTags).Methods("GET")      // 获取标签列表
+	admin.HandleFunc("/tags", handlers.CreateTag).Methods("POST")        // 创建标签
+	admin.HandleFunc("/tags/merge", handlers.MergeTags).Methods("POST")  // 合并标签
+	admin.HandleFunc("/tags/{id}", handlers.UpdateTag).Methods("PUT")    // 更新标签
+	admin.HandleFunc("/tags/{id}", handlers.DeleteTag).Methods("DELETE") // 删除标签
 
 	// 话题管理
-	admin.HandleFunc("/topics", handlers.GetAdminTopics).Methods("GET")                    // 获取话题列表
-	admin.HandleFunc("/topics/{id}", handlers.DeleteAdminTopic).Methods("DELETE")        // 删除话题
+	admin.HandleFunc("/topics", handlers.GetAdminTopics).Methods("GET")           // 获取话题列表
+	admin.HandleFunc("/topics/{id}", handlers.DeleteAdminTopic).Methods("DELETE") // 删除话题
 
 	// 回复管理
-	admin.HandleFunc("/posts", handlers.GetAdminPosts).Methods("GET")                      // 获取回复列表
-	admin.HandleFunc("/posts/{id}", handlers.DeleteAdminPost).Methods("DELETE")          // 删除回复
+	admin.HandleFunc("/posts", handlers.GetAdminPosts).Methods("GET")           // 获取回复列表
+	admin.HandleFunc("/posts/{id}", handlers.DeleteAdminPost).Methods("DELETE") // 删除回复
 
 	// 举报管理
-	admin.HandleFunc("/reports", handlers.GetAdminReports).Methods("GET")                      // 获取举报列表
-	admin.HandleFunc("/reports/{id}/handle", handlers.HandleReport).Methods("PUT")            // 处理举报
+	admin.HandleFunc("/reports", handlers.GetAdminReports).Methods("GET")          // 获取举报列表
+	admin.HandleFunc("/reports/{id}/handle", handlers.HandleReport).Methods("PUT") // 处理举报
 
 	// 公告管理
-	admin.HandleFunc("/announcements", handlers.CreateAnnouncement).Methods("POST")             // 创建公告
-	admin.HandleFunc("/announcements/{id}", handlers.UpdateAnnouncement).Methods("PUT")       // 更新公告
-	admin.HandleFunc("/announcements/{id}", handlers.DeleteAnnouncement).Methods("DELETE")    // 删除公告
+	admin.HandleFunc("/announcements", handlers.CreateAnnouncement).Methods("POST")        // 创建公告
+	admin.HandleFunc("/announcements/{id}", handlers.UpdateAnnouncement).Methods("PUT")    // 更新公告
+	admin.HandleFunc("/announcements/{id}", handlers.DeleteAnnouncement).Methods("DELETE") // 删除公告
 
 	// 网站配置
 	admin.HandleFunc("/config", handlers.UpdateSiteConfig).Methods("PUT") // 更新配置
@@ -170,6 +179,12 @@ func SetupRoutes() *mux.Router {
 
 	// 管理员密码
 	admin.HandleFunc("/change-password", handlers.ChangeAdminPassword).Methods("POST") // 修改密码
+
+	// 投票管理
+	admin.HandleFunc("/polls", handlers.GetAdminPolls).Methods("GET")      // 获取投票列表
+	admin.HandleFunc("/polls/{id}", handlers.UpdatePoll).Methods("PUT")    // 更新投票
+	admin.HandleFunc("/polls/{id}/end", handlers.EndPoll).Methods("POST")  // 结束投票
+	admin.HandleFunc("/polls/{id}", handlers.DeletePoll).Methods("DELETE") // 删除投票
 
 	return r
 }

@@ -148,3 +148,52 @@ func GetCreditUsers(w http.ResponseWriter, r *http.Request) {
 
 	utils.Success(w, users)
 }
+
+// SearchUsers 搜索用户处理器
+// 根据关键词搜索用户名或昵称
+func SearchUsers(w http.ResponseWriter, r *http.Request) {
+	keyword := r.URL.Query().Get("q")
+	if keyword == "" {
+		utils.Success(w, []models.User{})
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize < 1 || pageSize > 50 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+	searchPattern := "%" + keyword + "%"
+
+	var users []models.User
+	var total int64
+
+	// 统计匹配的用户数量
+	if err := database.DB.Model(&models.User{}).Where("username LIKE ? OR nickname LIKE ?", searchPattern, searchPattern).Count(&total).Error; err != nil {
+		log.Printf("search users: failed to count users, keyword: %s, error: %v", keyword, err)
+	}
+
+	// 搜索用户
+	if err := database.DB.Where("username LIKE ? OR nickname LIKE ?", searchPattern, searchPattern).
+		Select("id, username, nickname, avatar, signature, created_at").
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&users).Error; err != nil {
+		log.Printf("search users: failed to search users, keyword: %s, error: %v", keyword, err)
+		utils.Error(w, 500, "搜索失败")
+		return
+	}
+
+	log.Printf("search users: search completed, keyword: %s, results: %d", keyword, total)
+	utils.Success(w, map[string]interface{}{
+		"list":  users,
+		"total": total,
+		"page":  page,
+	})
+}
