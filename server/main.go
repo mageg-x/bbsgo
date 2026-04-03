@@ -108,30 +108,30 @@ func seedData() {
 			Key   string // 配置键
 			Value string // 配置值
 		}{
-			{"site_name", "彩虹BBS"},                    // 网站名称
-			{"site_logo", ""},                          // 网站 Logo
-			{"site_icon", ""},                          // 网站 Icon
-			{"site_description", "一个现代化的社区论坛系统"}, // 网站描述
-			{"allow_register", "true"},                  // 是否允许注册
-			{"allow_post", "true"},              // 是否允许发帖
-			{"allow_comment", "true"},                   // 是否允许评论
-			{"email_enabled", "false"},                 // 邮件服务开关
-			{"email_host", ""},                         // SMTP 服务器
-			{"email_port", "465"},                      // SMTP 端口
-			{"email_user", ""},                         // 邮箱用户名
-			{"email_password", ""},                    // 邮箱密码
-			{"email_from", ""},                         // 发件人地址
-			{"email_from_name", "彩虹BBS"},             // 发件人名称
-			{"qiniu_access_key", ""},                  // 七牛云 AccessKey
-			{"qiniu_secret_key", ""},                   // 七牛云 SecretKey
-			{"qiniu_bucket", ""},                       // 七牛云存储空间
-			{"qiniu_domain", ""},                        // 七牛云 CDN 域名
+			{"site_name", "彩虹BBS"}, // 网站名称
+			{"site_logo", ""},      // 网站 Logo
+			{"site_icon", ""},      // 网站 Icon
+			{"site_description", "一个现代化的社区论坛系统"},               // 网站描述
+			{"allow_register", "true"},                         // 是否允许注册
+			{"allow_post", "true"},                             // 是否允许发帖
+			{"allow_comment", "true"},                          // 是否允许评论
+			{"email_enabled", "false"},                         // 邮件服务开关
+			{"email_host", ""},                                 // SMTP 服务器
+			{"email_port", "465"},                              // SMTP 端口
+			{"email_user", ""},                                 // 邮箱用户名
+			{"email_password", ""},                             // 邮箱密码
+			{"email_from", ""},                                 // 发件人地址
+			{"email_from_name", "彩虹BBS"},                       // 发件人名称
+			{"qiniu_access_key", ""},                           // 七牛云 AccessKey
+			{"qiniu_secret_key", ""},                           // 七牛云 SecretKey
+			{"qiniu_bucket", ""},                               // 七牛云存储空间
+			{"qiniu_domain", ""},                               // 七牛云 CDN 域名
 			{"jwt_secret", "change-this-secret-in-production"}, // JWT 密钥
-			{"jwt_expire_days", "7"},                   // JWT 过期天数
-			{"credit_signin", "10"},                    // 签到积分
-			{"credit_signin_consecutive", "15"},        // 连续签到积分
-			{"cache_num_counters", "10000"},            // 缓存计数器数量
-			{"cache_max_cost", "10000000"},             // 缓存最大成本
+			{"jwt_expire_days", "7"},                           // JWT 过期天数
+			{"credit_signin", "2"},                             // 签到积分
+			{"credit_signin_consecutive", "3"},                 // 连续签到积分
+			{"cache_num_counters", "10000"},                    // 缓存计数器数量
+			{"cache_max_cost", "10000000"},                     // 缓存最大成本
 		}
 
 		// 插入配置数据

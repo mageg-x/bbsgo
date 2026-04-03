@@ -32,7 +32,7 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 计算签到积分（从数据库配置读取）
-	credits := utils.GetConfigInt("credit_signin", 10)
+	credits := utils.GetConfigInt("credit_signin", 2)
 
 	var lastSign time.Time
 	if user.LastSignAt != nil {
