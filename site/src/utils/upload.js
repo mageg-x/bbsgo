@@ -120,15 +120,16 @@ export async function checkFileExists(filename, contentHash) {
 }
 
 /**
- * 上传文件
+ * 上传文件（带进度回调）
  * @param {File} file 文件对象
  * @param {Object} options 配置选项
  * @param {string} options.dir 存储目录
  * @param {string} options.contentHash 文件内容哈希（用于秒传）
+ * @param {Function} options.onProgress 进度回调 (percent: number) => void
  * @returns {Promise<string>} 文件URL
  */
 export async function uploadFile(file, options = {}) {
-  const { dir = '', contentHash = '' } = options
+  const { dir = '', contentHash = '', onProgress } = options
   const formData = new FormData()
   formData.append('file', file)
 
@@ -141,7 +142,13 @@ export async function uploadFile(file, options = {}) {
     headers: {
       'Content-Type': 'multipart/form-data'
     },
-    params
+    params,
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        onProgress(percent)
+      }
+    }
   })
 
   if (res && res.url) {
@@ -182,15 +189,22 @@ export async function uploadImage(file, options = {}) {
 }
 
 /**
- * 通用视频上传（带秒传）
+ * 通用视频上传（带秒传和进度）
  * @param {File} file 视频文件
  * @param {Object} options 配置选项
  * @param {string} options.dir 存储目录
  * @param {Function} options.onInstant 秒传成功回调
+ * @param {Function} options.onProgress 进度回调 (percent: number) => void
+ * @param {number} options.maxSize 最大文件大小（字节），默认 50MB
  * @returns {Promise<string>} 文件URL
  */
 export async function uploadVideo(file, options = {}) {
-  const { dir = 'videos', onInstant } = options
+  const { dir = 'videos', onInstant, onProgress, maxSize = 50 * 1024 * 1024 } = options
+
+  // 检查文件大小
+  if (file.size > maxSize) {
+    throw new Error(`FILE_TOO_LARGE:${file.size}`)
+  }
 
   // 1. 计算文件 hash
   const contentHash = await calculateFileHash(file)
@@ -199,10 +213,11 @@ export async function uploadVideo(file, options = {}) {
   const checkRes = await checkFileExists(file.name, contentHash)
   if (checkRes.exists && checkRes.url) {
     console.log('秒传成功:', file.name)
+    onProgress?.(100)
     onInstant?.(checkRes.url)
     return checkRes.url
   }
 
   // 3. 上传
-  return uploadFile(file, { dir, contentHash })
+  return uploadFile(file, { dir, contentHash, onProgress })
 }

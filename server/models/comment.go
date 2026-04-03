@@ -19,6 +19,7 @@ type Comment struct {
 	Content   string         `gorm:"type:text;not null" json:"content"` // 评论正文内容
 	LikeCount int            `gorm:"default:0" json:"like_count"`       // 点赞数
 	IsPinned  bool           `gorm:"default:false" json:"is_pinned"`    // 是否置顶（帖子作者置顶）
+	IsBest    bool           `gorm:"default:false" json:"is_best"`      // 是否最佳评论（帖子作者标记）
 	CreatedAt time.Time      `json:"created_at"`                        // 创建时间
 	UpdatedAt time.Time      `json:"updated_at"`                        // 更新时间
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`                    // 软删除时间

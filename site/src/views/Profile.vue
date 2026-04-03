@@ -75,6 +75,25 @@
           </div>
           <div class="bg-white rounded-lg shadow-sm p-4">
             <div class="flex justify-between items-center mb-4">
+              <h3 class="font-medium text-gray-900">勋章墙</h3>
+              <router-link v-if="userBadges.length > 0" :to="`/user/${user?.id}/badges`" class="text-blue-500 text-sm hover:underline">
+                查看全部
+              </router-link>
+            </div>
+            <div v-if="userBadges.length > 0" class="grid grid-cols-6 gap-3">
+              <div v-for="ub in userBadges.slice(0, 6)" :key="ub.id" 
+                class="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                :title="`${ub.badge?.name} - ${ub.badge?.description}`">
+                <SvgBadge :type="ub.badge?.icon" :size="32" />
+                <span class="text-xs text-gray-600 text-center truncate w-full mt-1">{{ ub.badge?.name }}</span>
+              </div>
+            </div>
+            <div v-else class="text-center text-gray-400 py-6 text-sm">
+              暂无勋章
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm p-4">
+            <div class="flex justify-between items-center mb-4">
               <h3 class="font-medium text-gray-900">个人资料</h3>
               <button v-if="isCurrentUser" @click="openEditDialog" class="text-blue-500 text-sm hover:underline">
                 编辑资料
@@ -177,14 +196,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import api, { topicApi } from '@/api'
 import { uploadImage } from '@/utils/upload'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
+import { getDisplayBadges } from '@/utils/badge'
 import TopicCard from '@/components/TopicCard.vue'
+import SvgBadge from '@/components/SvgBadge.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -197,6 +218,7 @@ const userStats = ref({
 })
 const userTopics = ref([])
 const followers = ref([])
+const userBadges = ref([])
 const showEditDialog = ref(false)
 const saving = ref(false)
 const editForm = ref({
@@ -208,6 +230,19 @@ const editForm = ref({
 const isCurrentUser = computed(() => {
   return userStore.user?.id === parseInt(route.params.id)
 })
+
+// 监听路由参数变化，重新加载数据
+watch(() => route.params.id, async (newId) => {
+  if (newId) {
+    await Promise.all([
+      loadUser(),
+      loadUserTopics(),
+      loadFollowers(),
+      loadUserStats(),
+      loadUserBadges()
+    ])
+  }
+}, { immediate: false })
 
 function sendMessage() {
   // 跳转到私信页面，并带上目标用户信息
@@ -427,12 +462,23 @@ async function loadUserStats() {
   }
 }
 
+async function loadUserBadges() {
+  try {
+    const userId = route.params.id
+    const res = await api.get(`/users/${userId}/badges`)
+    userBadges.value = res || []
+  } catch (e) {
+    console.error('加载用户勋章失败', e)
+  }
+}
+
 onMounted(async () => {
   await Promise.all([
     loadUser(),
     loadUserTopics(),
     loadFollowers(),
-    loadUserStats()
+    loadUserStats(),
+    loadUserBadges()
   ])
 })
 </script>

@@ -223,6 +223,18 @@
         </div>
       </form>
     </div>
+
+    <!-- 视频上传进度对话框 -->
+    <el-dialog v-model="videoUploading" title="视频上传中" width="400px" :close-on-click-modal="false" :show-close="false">
+      <div class="py-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm text-gray-600">上传进度</span>
+          <span class="text-sm font-medium text-blue-600">{{ videoUploadProgress }}%</span>
+        </div>
+        <el-progress :percentage="videoUploadProgress" :stroke-width="12" />
+        <p class="text-xs text-gray-400 mt-3 text-center">请耐心等待，上传完成后将自动插入视频</p>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -499,6 +511,8 @@ const videoInputRef = ref(null)
 let searchTimeout = null
 
 const showPoll = ref(false)
+const videoUploading = ref(false)
+const videoUploadProgress = ref(0)
 const pollForm = ref({
   title: '',
   options: ['', ''],
@@ -527,9 +541,25 @@ async function handleVideoFileSelect(event) {
   const file = event.target.files[0]
   if (!file) return
 
+  // 检查文件大小（50MB）
+  if (file.size > 50 * 1024 * 1024) {
+    ElMessage.warning('视频大小超过50MB，建议自行压缩后上传')
+    event.target.value = ''
+    return
+  }
+
+  videoUploading.value = true
+  videoUploadProgress.value = 0
+
   try {
     const url = await uploadVideo(file, {
-      onInstant: () => ElMessage.success('视频上传成功（秒传）')
+      onInstant: () => {
+        ElMessage.success('视频上传成功（秒传）')
+        videoUploadProgress.value = 100
+      },
+      onProgress: (percent) => {
+        videoUploadProgress.value = percent
+      }
     })
 
     ElMessage.success('视频上传成功')
@@ -537,8 +567,13 @@ async function handleVideoFileSelect(event) {
     form.value.content += videoMarkdown
   } catch (error) {
     console.error('Video upload error:', error)
-    ElMessage.error('视频上传失败')
+    if (error.message && error.message.startsWith('FILE_TOO_LARGE')) {
+      ElMessage.warning('视频大小超过50MB，建议自行压缩后上传')
+    } else {
+      ElMessage.error('视频上传失败')
+    }
   } finally {
+    videoUploading.value = false
     event.target.value = ''
   }
 }
@@ -576,9 +611,24 @@ async function handleUploadVideo(files) {
   const file = files[0]
   if (!file) return []
 
+  // 检查文件大小（50MB）
+  if (file.size > 50 * 1024 * 1024) {
+    ElMessage.warning('视频大小超过50MB，建议自行压缩后上传')
+    return []
+  }
+
+  videoUploading.value = true
+  videoUploadProgress.value = 0
+
   try {
     const url = await uploadVideo(file, {
-      onInstant: () => ElMessage.success('视频上传成功（秒传）')
+      onInstant: () => {
+        ElMessage.success('视频上传成功（秒传）')
+        videoUploadProgress.value = 100
+      },
+      onProgress: (percent) => {
+        videoUploadProgress.value = percent
+      }
     })
 
     ElMessage.success('视频上传成功')
@@ -589,8 +639,14 @@ async function handleUploadVideo(files) {
     }]
   } catch (error) {
     console.error('Video upload error:', error)
-    ElMessage.error('视频上传失败')
+    if (error.message && error.message.startsWith('FILE_TOO_LARGE')) {
+      ElMessage.warning('视频大小超过50MB，建议自行压缩后上传')
+    } else {
+      ElMessage.error('视频上传失败')
+    }
     return []
+  } finally {
+    videoUploading.value = false
   }
 }
 

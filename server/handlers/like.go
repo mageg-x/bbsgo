@@ -4,12 +4,15 @@ import (
 	"bbsgo/database"
 	"bbsgo/middleware"
 	"bbsgo/models"
+	"bbsgo/services"
 	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
 )
+
+var likeBadgeService = services.NewBadgeService()
 
 // LikeRequest 点赞请求结构
 type LikeRequest struct {
@@ -64,12 +67,14 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 更新目标对象的点赞数
+	// 更新目标对象的点赞数，并触发被点赞者的勋章检查
+	var contentOwnerID uint
 	if req.TargetType == "topic" {
 		var topic models.Topic
 		if err := database.DB.First(&topic, req.TargetID).Error; err != nil {
 			log.Printf("create like: topic not found, topicID: %d, error: %v", req.TargetID, err)
 		} else {
+			contentOwnerID = topic.UserID
 			if err := database.DB.Model(&topic).UpdateColumn("like_count", topic.LikeCount+1).Error; err != nil {
 				log.Printf("create like: failed to increment topic like count, topicID: %d, error: %v", req.TargetID, err)
 			}
@@ -79,10 +84,16 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 		if err := database.DB.First(&comment, req.TargetID).Error; err != nil {
 			log.Printf("create like: comment not found, commentID: %d, error: %v", req.TargetID, err)
 		} else {
+			contentOwnerID = comment.UserID
 			if err := database.DB.Model(&comment).UpdateColumn("like_count", comment.LikeCount+1).Error; err != nil {
 				log.Printf("create like: failed to increment comment like count, commentID: %d, error: %v", req.TargetID, err)
 			}
 		}
+	}
+
+	// 如果成功获取内容作者ID，触发其勋章检查（因为收到了点赞）
+	if contentOwnerID > 0 {
+		go likeBadgeService.CheckAndAwardBadges(contentOwnerID)
 	}
 
 	log.Printf("create like: like created successfully, userID: %d, targetType: %s, targetID: %d", userID, req.TargetType, req.TargetID)

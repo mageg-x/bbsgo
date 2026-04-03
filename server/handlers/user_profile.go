@@ -183,16 +183,42 @@ func GetUserTopics(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 构建返回数据，添加 has_poll
+	// 收集所有作者用户ID
+	userIDs := make(map[uint]bool)
+	for _, t := range topics {
+		userIDs[t.UserID] = true
+	}
+
+	// 批量查询用户的勋章
+	userBadgesMap := make(map[uint][]models.UserBadge)
+	if len(userIDs) > 0 {
+		ids := make([]uint, 0, len(userIDs))
+		for id := range userIDs {
+			ids = append(ids, id)
+		}
+		var userBadges []models.UserBadge
+		if err := database.DB.Where("user_id IN ? AND is_revoked = ?", ids, false).
+			Preload("Badge").
+			Find(&userBadges).Error; err != nil {
+			log.Printf("get user topics: failed to query user badges, error: %v", err)
+		}
+		for _, ub := range userBadges {
+			userBadgesMap[ub.UserID] = append(userBadgesMap[ub.UserID], ub)
+		}
+	}
+
+	// 构建返回数据，添加 has_poll 和 author_badges
 	type TopicWithPoll struct {
 		models.Topic
-		HasPoll bool `json:"has_poll"`
+		HasPoll      bool                    `json:"has_poll"`
+		AuthorBadges []models.UserBadge      `json:"author_badges"`
 	}
 	var response []TopicWithPoll
 	for _, t := range topics {
 		response = append(response, TopicWithPoll{
-			Topic:   t,
-			HasPoll: hasPollMap[t.ID],
+			Topic:       t,
+			HasPoll:     hasPollMap[t.ID],
+			AuthorBadges: userBadgesMap[t.UserID],
 		})
 	}
 

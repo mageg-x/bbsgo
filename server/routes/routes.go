@@ -37,7 +37,7 @@ func SetupRoutes() *mux.Router {
 	api.HandleFunc("/config", handlers.GetSiteConfig).Methods("GET")                  // 获取网站配置
 	api.HandleFunc("/topics", handlers.GetTopics).Methods("GET")                      // 获取话题列表
 	api.HandleFunc("/topics/{id}", handlers.GetTopic).Methods("GET")                  // 获取话题详情
-	api.HandleFunc("/topics/{id}/comments", handlers.GetComments).Methods("GET")            // 获取话题评论
+	api.HandleFunc("/topics/{id}/comments", handlers.GetComments).Methods("GET")      // 获取话题评论
 	api.HandleFunc("/tags", handlers.GetTags).Methods("GET")                          // 获取标签列表
 	api.HandleFunc("/tags/search", handlers.SearchTags).Methods("GET")                // 搜索标签
 	api.HandleFunc("/tags/{id}", handlers.GetTag).Methods("GET")                      // 获取标签详情
@@ -71,16 +71,17 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/user/reports", handlers.GetUserReports).Methods("GET")        // 获取我的举报
 
 	// 话题操作
-	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")        // 创建话题
-	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")    // 更新话题
-	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE") // 删除话题
+	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")          // 创建话题
+	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")      // 更新话题
+	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")   // 删除话题
 	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT") // 作者置顶/取消置顶
 
 	// 评论操作
-	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST") // 创建评论
-	auth.HandleFunc("/comments/{id}", handlers.UpdateComment).Methods("PUT")         // 更新评论
-	auth.HandleFunc("/comments/{id}", handlers.DeleteComment).Methods("DELETE")      // 删除评论
-	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/pin", handlers.PinComment).Methods("PUT") // 置顶/取消置顶评论
+	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                    // 创建评论
+	auth.HandleFunc("/comments/{id}", handlers.UpdateComment).Methods("PUT")                            // 更新评论
+	auth.HandleFunc("/comments/{id}", handlers.DeleteComment).Methods("DELETE")                         // 删除评论
+	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/pin", handlers.PinComment).Methods("PUT")  // 置顶/取消置顶评论
+	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/best", handlers.BestComment).Methods("PUT")   // 标记/取消最佳评论
 
 	// 点赞操作
 	auth.HandleFunc("/likes", handlers.CreateLike).Methods("POST")      // 创建点赞
@@ -120,7 +121,9 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/reports", handlers.CreateReport).Methods("POST") // 创建举报
 
 	// 勋章操作
-	auth.HandleFunc("/badges", handlers.GetBadges).Methods("GET") // 获取勋章列表
+	auth.HandleFunc("/badges", handlers.GetBadges).Methods("GET")                     // 获取勋章列表
+	auth.HandleFunc("/badges/progress", handlers.GetUserBadgeProgress).Methods("GET") // 获取用户勋章进度
+	auth.HandleFunc("/users/{id}/badges", handlers.GetUserBadgesByID).Methods("GET")  // 获取指定用户勋章
 
 	// 文件上传
 	auth.HandleFunc("/upload", handlers.UploadFile).Methods("POST")           // 上传文件
@@ -188,6 +191,16 @@ func SetupRoutes() *mux.Router {
 	admin.HandleFunc("/polls/{id}", handlers.UpdatePoll).Methods("PUT")    // 更新投票
 	admin.HandleFunc("/polls/{id}/end", handlers.EndPoll).Methods("POST")  // 结束投票
 	admin.HandleFunc("/polls/{id}", handlers.DeletePoll).Methods("DELETE") // 删除投票
+
+	// 勋章管理
+	admin.HandleFunc("/badges", handlers.GetAdminBadges).Methods("GET")           // 获取勋章列表
+	admin.HandleFunc("/badges", handlers.CreateBadge).Methods("POST")             // 创建勋章
+	admin.HandleFunc("/badges/init", handlers.InitBadges).Methods("POST")         // 初始化勋章
+	admin.HandleFunc("/badges/{id}", handlers.UpdateBadge).Methods("PUT")         // 更新勋章
+	admin.HandleFunc("/badges/{id}", handlers.DeleteBadge).Methods("DELETE")      // 删除勋章
+	admin.HandleFunc("/badges/{id}/users", handlers.GetBadgeUsers).Methods("GET") // 获取勋章用户列表
+	admin.HandleFunc("/badges/award", handlers.AwardBadge).Methods("POST")        // 授予勋章
+	admin.HandleFunc("/badges/{id}/revoke", handlers.RevokeBadge).Methods("PUT")  // 撤销勋章
 
 	return r
 }

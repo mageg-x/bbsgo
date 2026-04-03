@@ -4,6 +4,7 @@ import (
 	"bbsgo/database"
 	"bbsgo/middleware"
 	"bbsgo/models"
+	"bbsgo/services"
 	"bbsgo/utils"
 	"encoding/json"
 	"log"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+var commentBadgeService = services.NewBadgeService()
 
 // GetComments 获取话题的评论列表处理器
 // 支持分页，返回话题下的一级评论
@@ -50,8 +53,54 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 收集所有评论者的用户ID
+	userIDs := make(map[uint]bool)
+	for _, comment := range comments {
+		userIDs[comment.UserID] = true
+	}
+
+	// 批量查询用户的勋章
+	userBadgesMap := make(map[uint][]models.UserBadge)
+	if len(userIDs) > 0 {
+		var userBadges []models.UserBadge
+		ids := make([]uint, 0, len(userIDs))
+		for id := range userIDs {
+			ids = append(ids, id)
+		}
+		if err := database.DB.Where("user_id IN ? AND is_revoked = ?", ids, false).
+			Preload("Badge").
+			Find(&userBadges).Error; err != nil {
+			log.Printf("get comments: failed to query user badges, error: %v", err)
+		}
+		for _, ub := range userBadges {
+			userBadgesMap[ub.UserID] = append(userBadgesMap[ub.UserID], ub)
+		}
+	}
+
+	// 构建响应结构，包含用户勋章
+	type CommentWithUserBadges struct {
+		models.Comment
+		User struct {
+			ID        uint                `json:"id"`
+			Username  string              `json:"username"`
+			Nickname  string              `json:"nickname"`
+			Avatar    string              `json:"avatar"`
+			Badges    []models.UserBadge  `json:"badges"`
+		} `json:"user"`
+	}
+
+	response := make([]CommentWithUserBadges, len(comments))
+	for i, comment := range comments {
+		response[i] = CommentWithUserBadges{Comment: comment}
+		response[i].User.ID = comment.User.ID
+		response[i].User.Username = comment.User.Username
+		response[i].User.Nickname = comment.User.Nickname
+		response[i].User.Avatar = comment.User.Avatar
+		response[i].User.Badges = userBadgesMap[comment.UserID]
+	}
+
 	utils.Success(w, map[string]interface{}{
-		"list":      comments,
+		"list":      response,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
@@ -152,6 +201,9 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("create comment: comment created successfully, id: %d, topicID: %d, userID: %d", comment.ID, topicID, userID)
 	utils.Success(w, comment)
+
+	// 检查并授予勋章
+	go commentBadgeService.CheckAndAwardBadges(userID)
 }
 
 // UpdateComment 更新评论处理器
@@ -343,5 +395,79 @@ func PinComment(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, map[string]interface{}{
 		"id":        comment.ID,
 		"is_pinned": req.Pinned,
+	})
+}
+
+// BestComment 标记/取消最佳评论处理器
+// 仅帖子作者可以操作
+func BestComment(w http.ResponseWriter, r *http.Request) {
+	// 验证用户登录
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		log.Printf("best comment: user not authenticated")
+		utils.Error(w, 401, "未认证")
+		return
+	}
+
+	vars := mux.Vars(r)
+	topicID, _ := strconv.Atoi(vars["topic_id"])
+	commentID, _ := strconv.Atoi(vars["comment_id"])
+
+	// 查询评论
+	var comment models.Comment
+	if err := database.DB.First(&comment, commentID).Error; err != nil {
+		log.Printf("best comment: comment not found, commentID: %d, error: %v", commentID, err)
+		utils.Error(w, 404, "评论不存在")
+		return
+	}
+
+	// 验证评论属于指定话题
+	if comment.TopicID != uint(topicID) {
+		log.Printf("best comment: comment does not belong to topic, commentID: %d, topicID: %d", commentID, topicID)
+		utils.Error(w, 400, "评论不属于该话题")
+		return
+	}
+
+	// 查询话题，验证是否为帖子作者
+	var topic models.Topic
+	if err := database.DB.First(&topic, topicID).Error; err != nil {
+		log.Printf("best comment: topic not found, topicID: %d, error: %v", topicID, err)
+		utils.Error(w, 404, "话题不存在")
+		return
+	}
+
+	// 仅帖子作者可以标记最佳评论
+	if topic.UserID != userID {
+		log.Printf("best comment: permission denied, topicID: %d, userID: %d", topicID, userID)
+		utils.Error(w, 403, "无权限操作")
+		return
+	}
+
+	// 解析请求体
+	var req struct {
+		Best bool `json:"best"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("best comment: failed to decode request body, commentID: %d, error: %v", commentID, err)
+		utils.Error(w, 400, "无效的请求参数")
+		return
+	}
+
+	// 更新最佳评论状态
+	if err := database.DB.Model(&comment).UpdateColumn("is_best", req.Best).Error; err != nil {
+		log.Printf("best comment: failed to update best status, commentID: %d, error: %v", commentID, err)
+		utils.Error(w, 500, "操作失败")
+		return
+	}
+
+	// 如果标记为最佳评论，触发评论作者的勋章检查
+	if req.Best {
+		go commentBadgeService.CheckAndAwardBadges(comment.UserID)
+	}
+
+	log.Printf("best comment: comment best updated, commentID: %d, is_best: %v", commentID, req.Best)
+	utils.Success(w, map[string]interface{}{
+		"id":      comment.ID,
+		"is_best": req.Best,
 	})
 }

@@ -22,12 +22,12 @@ type SendCodeRequest struct {
 
 // RegisterWithCodeRequest 邮箱注册请求结构
 type RegisterWithCodeRequest struct {
-	Username        string `json:"username"`        // 用户名
-	Nickname        string `json:"nickname"`        // 昵称
-	Email           string `json:"email"`           // 邮箱
-	Password        string `json:"password"`       // 密码
+	Username        string `json:"username"`         // 用户名
+	Nickname        string `json:"nickname"`         // 昵称
+	Email           string `json:"email"`            // 邮箱
+	Password        string `json:"password"`         // 密码
 	ConfirmPassword string `json:"confirm_password"` // 确认密码
-	Code            string `json:"code"`            // 验证码
+	Code            string `json:"code"`             // 验证码
 }
 
 // SendVerificationCode 发送邮箱验证码处理器
@@ -175,9 +175,9 @@ func RegisterWithCode(w http.ResponseWriter, r *http.Request) {
 		Nickname:     req.Nickname,
 		Email:        req.Email,
 		PasswordHash: hashedPassword,
-		Role:         0,  // 普通用户
-		Credits:      0,  // 初始积分
-		Level:        1,  // 初始等级
+		Role:         0, // 普通用户
+		Credits:      0, // 初始积分
+		Level:        1, // 初始等级
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -195,6 +195,11 @@ func RegisterWithCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("register with code: user registered successfully, userID: %d, username: %s, email: %s", user.ID, user.Username, user.Email)
+
+	// 检查并授予勋章
+	badgeService := services.NewBadgeService()
+	go badgeService.CheckAndAwardBadges(user.ID)
+
 	utils.Success(w, map[string]interface{}{
 		"token": token,
 		"user":  user,

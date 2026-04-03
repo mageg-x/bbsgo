@@ -62,6 +62,7 @@ export const topicApi = {
 
 export const commentPinApi = {
   pinComment: (topicId, commentId, pinned) => api.put(`/topics/${topicId}/comments/${commentId}/pin`, { pinned }),
+  bestComment: (topicId, commentId, best) => api.put(`/topics/${topicId}/comments/${commentId}/best`, { best }),
 }
 
 export const reportApi = {

@@ -14,10 +14,14 @@
           :class="['p-4 hover:bg-gray-50 cursor-pointer', !notif.is_read ? 'bg-blue-50' : '']"
           @click="handleClick(notif)">
           <div class="flex items-start">
-            <div :class="['w-2 h-2 rounded-full mt-2 mr-3',
+            <div :class="['w-2 h-2 rounded-full mt-2 mr-3 flex-shrink-0',
               notif.type === 'like' ? 'bg-red-500' :
                 notif.type === 'comment' ? 'bg-blue-500' :
-                  notif.type === 'follow' ? 'bg-green-500' : 'bg-gray-500']"></div>
+                  notif.type === 'follow' ? 'bg-green-500' :
+                    notif.type === 'badge' ? 'bg-yellow-500' : 'bg-gray-500']"></div>
+            <div v-if="notif.type === 'badge' && notif.badge" class="mr-2">
+              <SvgBadge :type="notif.badge.icon" :size="28" :title="notif.badge.name" />
+            </div>
             <div class="flex-1">
               <p class="text-gray-900">{{ notif.content }}</p>
               <span class="text-xs text-gray-400">{{ formatTime(notif.created_at) }}</span>
@@ -40,6 +44,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
+import SvgBadge from '@/components/SvgBadge.vue'
 
 const router = useRouter()
 const notifications = ref([])

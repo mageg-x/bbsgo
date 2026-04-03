@@ -4,12 +4,15 @@ import (
 	"bbsgo/database"
 	"bbsgo/middleware"
 	"bbsgo/models"
+	"bbsgo/services"
 	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
 )
+
+var followBadgeService = services.NewBadgeService()
 
 // GetFollows 获取当前用户关注的人列表处理器
 func GetFollows(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +91,9 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 		utils.Error(w, 500, "关注失败")
 		return
 	}
+
+	// 触发被关注者的勋章检查（因为增加了粉丝）
+	go followBadgeService.CheckAndAwardBadges(req.FollowUserID)
 
 	log.Printf("create follow: follow created successfully, userID: %d, followUserID: %d", userID, req.FollowUserID)
 	utils.Success(w, follow)

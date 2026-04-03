@@ -23,9 +23,15 @@
         <router-link :to="`/user/${topic.user_id}`">
           <img :src="getUserAvatar(topic.user)" class="w-12 h-12 rounded-full">
         </router-link>
-        <div>
-          <router-link :to="`/user/${topic.user_id}`" class="font-medium text-gray-900 hover:text-blue-500">{{
-            getUserDisplayName(topic.user) }}</router-link>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <router-link :to="`/user/${topic.user_id}`" class="font-medium text-gray-900 hover:text-blue-500">{{
+              getUserDisplayName(topic.user) }}</router-link>
+            <div v-if="displayAuthorBadges.length > 0" class="flex items-center gap-1">
+              <SvgBadge v-for="badge in displayAuthorBadges" :key="badge.id"
+                :type="badge.icon" :size="24" :title="badge.name" />
+            </div>
+          </div>
           <div class="text-sm text-gray-500">{{ formatTime(topic.created_at) }} · {{ topic.view_count }} 浏览</div>
         </div>
       </div>
@@ -157,11 +163,19 @@
             <div class="flex items-center justify-between mb-1">
               <div class="flex items-center space-x-2">
                 <span v-if="post.is_pinned" class="text-xs text-red-500 font-medium">置顶</span>
+                <SvgBadge v-if="post.is_best" type="gold-comment" :size="20" title="最佳评论" />
                 <span class="font-medium text-gray-900">{{ getUserDisplayName(post.user) }}</span>
                 <span v-if="post.user_id === topic?.user_id" class="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">楼主</span>
+                <div v-if="getCommentAuthorTopBadge(post)" class="flex items-center gap-0.5 ml-1">
+                  <SvgBadge :type="getCommentAuthorTopBadge(post).icon" :size="16" :title="getCommentAuthorTopBadge(post).name" />
+                </div>
                 <span class="text-sm text-gray-500">{{ formatTime(post.created_at) }}</span>
               </div>
               <div class="flex gap-2">
+                <button v-if="canBestComment(post)" @click="toggleCommentBest(post)"
+                  :class="['text-xs transition-colors', post.is_best ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-400 hover:text-yellow-500']">
+                  {{ post.is_best ? '取消最佳' : '标记最佳' }}
+                </button>
                 <button v-if="canPinComment(post)" @click="toggleCommentPin(post)"
                   :class="['text-xs transition-colors', post.is_pinned ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-500']">
                   {{ post.is_pinned ? '取消置顶' : '置顶' }}
@@ -334,7 +348,9 @@ import api, { pollApi, topicApi, commentApi, commentPinApi, reportApi } from '@/
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 import { renderMarkdown } from '@/utils/markdown'
+import { getDisplayBadges } from '@/utils/badge'
 import QRCode from 'qrcode'
+import SvgBadge from '@/components/SvgBadge.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -347,6 +363,7 @@ const favorited = ref(false)
 const postLikes = ref({})
 const showLightbox = ref(false)
 const lightboxImage = ref('')
+const authorBadges = ref([])
 
 const poll = ref(null)
 const selectedOptions = ref([])
@@ -375,6 +392,11 @@ const isPollEnded = computed(() => {
   return new Date(poll.value.end_time) < new Date()
 })
 
+// 作者勋章展示（取前3个，按优先级排序）
+const displayAuthorBadges = computed(() => {
+  return getDisplayBadges(authorBadges.value, 'author-card')
+})
+
 const canDeleteTopic = computed(() => {
   if (!userStore.isLoggedIn || !topic.value) return false
   const isAuthor = topic.value.user_id === userStore.user?.id
@@ -400,6 +422,37 @@ function canPinComment(post) {
   // 只有帖子作者可以置顶评论
   if (!userStore.isLoggedIn || !topic.value) return false
   return topic.value.user_id === userStore.user?.id
+}
+
+function canBestComment(post) {
+  // 只有帖子作者可以标记最佳评论
+  if (!userStore.isLoggedIn || !topic.value) return false
+  return topic.value.user_id === userStore.user?.id
+}
+
+// 获取评论作者的最高优先级勋章（用于显示）
+function getCommentAuthorTopBadge(post) {
+  if (!post.user?.badges || post.user.badges.length === 0) return null
+  const topBadges = getDisplayBadges(post.user.badges, 'comment')
+  return topBadges.length > 0 ? topBadges[0] : null
+}
+
+async function toggleCommentBest(post) {
+  try {
+    await ElMessageBox.confirm(
+      post.is_best ? '确定要取消最佳评论吗？' : '确定要标记为最佳评论吗？',
+      post.is_best ? '取消最佳' : '标记最佳',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    await commentPinApi.bestComment(topic.value.id, post.id, !post.is_best)
+    post.is_best = !post.is_best
+    ElMessage.success(post.is_best ? '已标记为最佳评论' : '已取消最佳评论')
+  } catch (e) {
+    if (e !== 'cancel') {
+      console.error('操作失败', e)
+      ElMessage.error('操作失败')
+    }
+  }
 }
 
 async function toggleCommentPin(post) {
@@ -649,11 +702,26 @@ async function loadTopic() {
     }
 
     await loadPoll()
+    
+    // 加载作者勋章
+    if (topic.value?.user_id) {
+      await loadAuthorBadges()
+    }
 
     // 设置媒体查看器
     setupMediaViewers()
   } catch (e) {
     console.error(e)
+  }
+}
+
+async function loadAuthorBadges() {
+  try {
+    if (!topic.value?.user_id) return
+    const res = await api.get(`/users/${topic.value.user_id}/badges`)
+    authorBadges.value = res || []
+  } catch (e) {
+    console.error('加载作者勋章失败', e)
   }
 }
 

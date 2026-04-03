@@ -38,15 +38,19 @@
         <div v-for="topic in topics" :key="topic.id"
           class="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
           <div class="flex space-x-4">
-            <router-link :to="`/user/${topic.user_id}`">
-              <img :src="getUserAvatar(topic.user)" class="w-12 h-12 rounded-full">
-            </router-link>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center space-x-2">
+                  <router-link :to="`/user/${topic.user_id}`">
+                    <img :src="getUserAvatar(topic.user)" class="w-12 h-12 rounded-full">
+                  </router-link>
                   <router-link :to="`/user/${topic.user_id}`" class="font-medium text-gray-900 hover:text-blue-500">
                     {{ getUserDisplayName(topic.user) }}
                   </router-link>
+                  <div v-if="getAuthorBadges(topic).length > 0" class="flex items-center gap-0.5">
+                    <SvgBadge v-for="badge in getAuthorBadges(topic)" :key="badge.id"
+                      :type="badge.icon" :size="18" :title="badge.name" />
+                  </div>
                   <span v-if="topic.forum" class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
                     {{ topic.forum.name }}
                   </span>
@@ -54,34 +58,48 @@
                 <span class="text-xs text-gray-400">{{ formatTime(topic.created_at) }}</span>
               </div>
               <router-link :to="`/topic/${topic.id}`" class="block">
-                <h3 class="text-lg font-semibold mb-2 hover:text-blue-500 line-clamp-2 flex items-center flex-wrap gap-1">
-                  <span v-if="topic.is_pinned" class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded font-medium">置顶</span>
-                  <span v-if="topic.is_essence" class="text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded font-medium">精华</span>
-                  <span v-if="topic.is_locked" class="text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded font-medium">锁定</span>
+                <h3
+                  class="text-lg font-semibold mb-2 hover:text-blue-500 line-clamp-2 flex items-center flex-wrap gap-1">
+                  <span v-if="topic.is_pinned"
+                    class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded font-medium">置顶</span>
+                  <span v-if="topic.is_essence"
+                    class="text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded font-medium">精华</span>
+                  <span v-if="topic.is_locked"
+                    class="text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded font-medium">锁定</span>
                   <span class="text-gray-900">{{ topic.title }}</span>
                 </h3>
                 <!-- 图片预览 -->
                 <div v-if="extractFirstImage(topic.content)" class="mb-3">
-                  <img :src="extractFirstImage(topic.content)" class="w-full max-h-64 object-cover rounded-lg" loading="lazy">
+                  <img :src="extractFirstImage(topic.content)" class="w-full max-h-64 object-cover rounded-lg"
+                    loading="lazy">
                 </div>
                 <!-- 视频/投票标识（图片存在时也显示） -->
                 <div v-if="hasVideo(topic.content) || topic.has_poll" class="mb-3 flex items-center gap-2">
-                  <span v-if="hasVideo(topic.content)" class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs">
+                  <span v-if="hasVideo(topic.content)"
+                    class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                      </path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     视频
                   </span>
-                  <span v-if="topic.has_poll" class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 rounded text-xs">
+                  <span v-if="topic.has_poll"
+                    class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 rounded text-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                      </path>
                     </svg>
                     投票
                   </span>
                 </div>
                 <!-- 无图片时显示文字预览 -->
-                <p v-if="!extractFirstImage(topic.content) && !hasVideo(topic.content) && !topic.has_poll" class="text-gray-600 text-sm mb-3 line-clamp-3">{{ stripMarkdown(topic.content).substring(0, 200) }}</p>
+                <p v-if="!extractFirstImage(topic.content) && !hasVideo(topic.content) && !topic.has_poll"
+                  class="text-gray-600 text-sm mb-3 line-clamp-3">{{ stripMarkdown(topic.content).substring(0, 200) }}
+                </p>
               </router-link>
               <div class="flex items-center flex-wrap gap-2 mb-2" v-if="topic.tags && topic.tags.length > 0">
                 <router-link v-for="tag in topic.tags" :key="tag.id" :to="`/?tag=${tag.id}`"
@@ -192,6 +210,8 @@ import api from '@/api'
 import { useUserStore } from '@/stores/user'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 import { stripMarkdown, extractFirstImage, hasVideo } from '@/utils/markdown'
+import { getDisplayBadges } from '@/utils/badge'
+import SvgBadge from '@/components/SvgBadge.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +253,12 @@ function formatTime(time) {
   if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
   if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
   return Math.floor(diff / 86400000) + '天前'
+}
+
+// 获取帖子作者的展示勋章（最多2枚）
+function getAuthorBadges(topic) {
+  if (!topic.author_badges || topic.author_badges.length === 0) return []
+  return getDisplayBadges(topic.author_badges, 'post-list')
 }
 
 async function loadTags() {

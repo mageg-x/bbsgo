@@ -23,6 +23,11 @@ const routes = [
     component: () => import("@/views/Profile.vue"),
   },
   {
+    path: "/user/:id/badges",
+    name: "UserBadges",
+    component: () => import("@/views/UserBadges.vue"),
+  },
+  {
     path: "/topic/:id",
     name: "TopicDetail",
     component: () => import("@/views/TopicDetail.vue"),

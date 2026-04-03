@@ -45,8 +45,26 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 构建响应，包含勋章详细信息
+	type NotificationWithBadge struct {
+		models.Notification
+		Badge *models.Badge `json:"badge,omitempty"`
+	}
+
+	notificationsWithBadge := make([]NotificationWithBadge, len(notifications))
+	for i, n := range notifications {
+		notificationsWithBadge[i] = NotificationWithBadge{Notification: n}
+		// 如果是勋章通知，查询勋章详细信息
+		if n.Type == "badge" && n.RelatedType == "badge" && n.RelatedID > 0 {
+			var badge models.Badge
+			if err := database.DB.First(&badge, n.RelatedID).Error; err == nil {
+				notificationsWithBadge[i].Badge = &badge
+			}
+		}
+	}
+
 	utils.Success(w, map[string]interface{}{
-		"list":      notifications,
+		"list":      notificationsWithBadge,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
