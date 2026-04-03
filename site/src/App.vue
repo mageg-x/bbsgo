@@ -230,7 +230,8 @@ async function loadSiteConfig() {
 async function loadForums() {
   try {
     const res = await api.get('/forums')
-    forums.value = res || []
+    // 在板块列表最前面加一个"全部"选项
+    forums.value = [{ id: 1, name: '全部', sort_order: 0 }, ...(res || [])]
   } catch (e) {
     console.error(e)
   }

@@ -125,11 +125,11 @@
             </div>
             <div v-if="followers.length > 0" class="space-y-3">
               <div v-for="follower in followers" :key="follower.id" class="flex items-center space-x-3">
-                <img :src="getUserAvatar(follower)" class="w-10 h-10 rounded-full bg-gray-200">
+                <img :src="getUserAvatar(follower.user)" class="w-10 h-10 rounded-full bg-gray-200">
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-gray-900 truncate">{{ getUserDisplayName(follower) }}
+                  <div class="text-sm font-medium text-gray-900 truncate">{{ getUserDisplayName(follower.user) }}
                   </div>
-                  <div class="text-xs text-gray-400 truncate">{{ follower.signature || '这家伙很懒，什么都没留下' }}</div>
+                  <div class="text-xs text-gray-400 truncate">{{ follower.user?.signature || '这家伙很懒，什么都没留下' }}</div>
                 </div>
                 <button class="bg-blue-500 text-white text-xs px-3 py-1 rounded hover:bg-blue-600">+ 关注</button>
               </div>

@@ -140,6 +140,10 @@
     <div class="mt-8">
       <h3 class="text-lg font-medium text-gray-900 mb-4">{{ posts.length }} 条评论</h3>
       <div v-if="userStore.isLoggedIn && configStore.state.allow_comment && topic?.allow_comment" class="mb-6">
+        <div v-if="replyTo" class="mb-2 text-sm text-gray-600 flex items-center">
+          <span>回复 @{{ replyToUser }}</span>
+          <button @click="cancelReply" class="ml-2 text-red-500 hover:text-red-600">取消</button>
+        </div>
         <textarea v-model="newPost" rows="3"
           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
           placeholder="写下你的评论..."></textarea>
@@ -169,6 +173,7 @@
                 <span v-if="post.is_pinned" class="text-xs text-red-500 font-medium">置顶</span>
                 <SvgBadge v-if="post.is_best" type="gold-comment" :size="20" title="最佳评论" />
                 <span class="font-medium text-gray-900">{{ getUserDisplayName(post.user) }}</span>
+                <span v-if="post.reply_user" class="text-gray-400 text-sm">回复 @{{ post.reply_user.nickname || post.reply_user.username }}</span>
                 <span v-if="post.user_id === topic?.user_id" class="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">楼主</span>
                 <div v-if="getCommentAuthorTopBadge(post)" class="flex items-center gap-0.5 ml-1">
                   <SvgBadge :type="getCommentAuthorTopBadge(post).icon" :size="16" :title="getCommentAuthorTopBadge(post).name" />
@@ -198,7 +203,7 @@
                 :class="['transition-colors', getPostLiked(post.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500']">
                 {{ getPostLiked(post.id) ? '❤️' : '🤍' }} {{ post.like_count }}
               </button>
-              <button class="text-gray-500 hover:text-blue-500">回复</button>
+              <button @click="openReply(post)" class="text-gray-500 hover:text-blue-500">回复</button>
             </div>
           </div>
         </div>
@@ -383,6 +388,10 @@ const reportTargetTitle = ref('')
 const selectedReportReason = ref('')
 const reportDetail = ref('')
 const reportSubmitting = ref(false)
+
+// 回复相关
+const replyTo = ref(null)
+const replyToUser = ref(null)
 
 // 分享相关
 const shareDialogVisible = ref(false)
@@ -943,12 +952,30 @@ async function togglePostLike(post) {
 async function submitPost() {
   if (!newPost.value.trim()) return
   try {
-    await api.post(`/topics/${route.params.id}/comments`, { content: newPost.value })
+    const payload = { content: newPost.value }
+    if (replyTo.value) {
+      payload.reply_to_id = replyTo.value
+    }
+    await api.post(`/topics/${route.params.id}/comments`, payload)
     newPost.value = ''
+    replyTo.value = null
+    replyToUser.value = null
     loadTopic()
   } catch (e) {
     console.error(e)
   }
+}
+
+function openReply(post) {
+  replyTo.value = post.id
+  replyToUser.value = getUserDisplayName(post.user)
+  // 滚动到评论输入框
+  document.querySelector('.topic-detail-container')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+function cancelReply() {
+  replyTo.value = null
+  replyToUser.value = null
 }
 
 function openLightbox(src) {

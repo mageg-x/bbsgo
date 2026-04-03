@@ -39,14 +39,16 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * pageSize
 
-	// 统计一级评论数量
-	if err := database.DB.Model(&models.Comment{}).Where("topic_id = ? AND parent_id IS NULL", topicID).Count(&total).Error; err != nil {
+	// 统计评论数量
+	if err := database.DB.Model(&models.Comment{}).Where("topic_id = ?", topicID).Count(&total).Error; err != nil {
 		log.Printf("get comments: failed to count comments, topicID: %d, error: %v", topicID, err)
 	}
 
-	// 查询一级评论，按置顶和创建时间排序
-	if err := database.DB.Where("topic_id = ? AND parent_id IS NULL", topicID).
+	// 查询所有评论，按置顶和创建时间排序
+	if err := database.DB.Where("topic_id = ?", topicID).
 		Preload("User").
+		Preload("ReplyTo").
+		Preload("ReplyTo.User").
 		Order("is_pinned DESC, created_at ASC").
 		Offset(offset).Limit(pageSize).Find(&comments).Error; err != nil {
 		log.Printf("get comments: failed to query comments, topicID: %d, error: %v", topicID, err)
@@ -78,7 +80,7 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 构建响应结构，包含用户勋章
+	// 构建响应结构，包含用户勋章和被回复用户信息
 	type CommentWithUserBadges struct {
 		models.Comment
 		User struct {
@@ -88,6 +90,11 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 			Avatar   string             `json:"avatar"`
 			Badges   []models.UserBadge `json:"badges"`
 		} `json:"user"`
+		ReplyUser *struct {
+			ID       uint   `json:"id"`
+			Username string `json:"username"`
+			Nickname string `json:"nickname"`
+		} `json:"reply_user,omitempty"`
 	}
 
 	response := make([]CommentWithUserBadges, len(comments))
@@ -98,6 +105,18 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		response[i].User.Nickname = comment.User.Nickname
 		response[i].User.Avatar = comment.User.Avatar
 		response[i].User.Badges = userBadgesMap[comment.UserID]
+		// 如果是回复评论，添加被回复用户信息
+		if comment.ReplyTo != nil && comment.ReplyTo.User.ID != 0 {
+			response[i].ReplyUser = &struct {
+				ID       uint   `json:"id"`
+				Username string `json:"username"`
+				Nickname string `json:"nickname"`
+			}{
+				ID:       comment.ReplyTo.User.ID,
+				Username: comment.ReplyTo.User.Username,
+				Nickname: comment.ReplyTo.User.Nickname,
+			}
+		}
 	}
 
 	utils.Success(w, map[string]interface{}{
@@ -131,8 +150,8 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	// 解析请求体
 	var req struct {
-		Content  string `json:"content"`   // 评论内容
-		ParentID *uint  `json:"parent_id"` // 父评论ID（用于嵌套评论）
+		Content string `json:"content"` // 评论内容
+		ReplyToID *uint `json:"reply_to_id"` // 回复给哪个评论的ID
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create comment: failed to decode request body, topicID: %d, error: %v", topicID, err)
@@ -167,7 +186,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		TopicID:  uint(topicID),
 		UserID:   userID,
 		Content:  req.Content,
-		ParentID: req.ParentID,
+		ReplyToID: req.ReplyToID,
 	}
 
 	if err := database.DB.Create(&comment).Error; err != nil {
@@ -248,7 +267,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	delete(updates, "id")
 	delete(updates, "user_id")
 	delete(updates, "topic_id")
-	delete(updates, "parent_id")
+	delete(updates, "reply_id")
 	delete(updates, "created_at")
 	delete(updates, "like_count")
 	delete(updates, "is_pinned")
