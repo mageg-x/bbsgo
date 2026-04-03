@@ -58,3 +58,21 @@ export function stripMarkdown(content) {
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
+
+// 提取内容中的第一张图片URL
+export function extractFirstImage(content) {
+  if (!content) return null
+  // 匹配 HTML img 标签
+  const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i)
+  if (imgMatch) return imgMatch[1]
+  // 匹配 markdown 图片
+  const mdImgMatch = content.match(/!\[.*?\]\((.*?)\)/)
+  if (mdImgMatch) return mdImgMatch[1]
+  return null
+}
+
+// 检查内容是否包含视频
+export function hasVideo(content) {
+  if (!content) return false
+  return /<video[^>]*>|!\[.*?\]\(.*?\.(mp4|webm|ogg)\)/i.test(content)
+}

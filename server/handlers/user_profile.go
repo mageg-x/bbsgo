@@ -167,8 +167,37 @@ func GetUserTopics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 给每个 topic 添加 has_poll 字段
+	var topicIDs []uint
+	for _, t := range topics {
+		topicIDs = append(topicIDs, t.ID)
+	}
+
+	// 批量查询投票存在的 topic IDs
+	hasPollMap := make(map[uint]bool)
+	if len(topicIDs) > 0 {
+		var polls []models.Poll
+		database.DB.Model(&models.Poll{}).Where("topic_id IN ?", topicIDs).Select("topic_id").Find(&polls)
+		for _, p := range polls {
+			hasPollMap[p.TopicID] = true
+		}
+	}
+
+	// 构建返回数据，添加 has_poll
+	type TopicWithPoll struct {
+		models.Topic
+		HasPoll bool `json:"has_poll"`
+	}
+	var response []TopicWithPoll
+	for _, t := range topics {
+		response = append(response, TopicWithPoll{
+			Topic:   t,
+			HasPoll: hasPollMap[t.ID],
+		})
+	}
+
 	utils.Success(w, map[string]interface{}{
-		"list":      topics,
+		"list":      response,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,

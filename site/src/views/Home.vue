@@ -60,7 +60,28 @@
                   <span v-if="topic.is_locked" class="text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded font-medium">锁定</span>
                   <span class="text-gray-900">{{ topic.title }}</span>
                 </h3>
-                <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ stripMarkdown(topic.content).substring(0, 200) }}</p>
+                <!-- 图片预览 -->
+                <div v-if="extractFirstImage(topic.content)" class="mb-3">
+                  <img :src="extractFirstImage(topic.content)" class="w-full max-h-64 object-cover rounded-lg" loading="lazy">
+                </div>
+                <!-- 视频/投票标识（图片存在时也显示） -->
+                <div v-if="hasVideo(topic.content) || topic.has_poll" class="mb-3 flex items-center gap-2">
+                  <span v-if="hasVideo(topic.content)" class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    视频
+                  </span>
+                  <span v-if="topic.has_poll" class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-600 rounded text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    投票
+                  </span>
+                </div>
+                <!-- 无图片时显示文字预览 -->
+                <p v-if="!extractFirstImage(topic.content) && !hasVideo(topic.content) && !topic.has_poll" class="text-gray-600 text-sm mb-3 line-clamp-3">{{ stripMarkdown(topic.content).substring(0, 200) }}</p>
               </router-link>
               <div class="flex items-center flex-wrap gap-2 mb-2" v-if="topic.tags && topic.tags.length > 0">
                 <router-link v-for="tag in topic.tags" :key="tag.id" :to="`/?tag=${tag.id}`"
@@ -170,7 +191,7 @@ import { ElMessage } from 'element-plus'
 import api from '@/api'
 import { useUserStore } from '@/stores/user'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
-import { stripMarkdown } from '@/utils/markdown'
+import { stripMarkdown, extractFirstImage, hasVideo } from '@/utils/markdown'
 
 const route = useRoute()
 const router = useRouter()

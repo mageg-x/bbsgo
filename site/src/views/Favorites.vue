@@ -22,9 +22,7 @@
         <div class="flex items-start justify-between">
           <div class="flex-1 min-w-0">
             <router-link :to="`/topic/${fav.topic?.id}`" class="block">
-              <h3 class="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-500 line-clamp-2">
-                {{ fav.topic?.title }}
-              </h3>
+              <TopicCard :topic="fav.topic" :external-has-poll="fav.topic_has_poll" />
             </router-link>
             <div class="flex items-center space-x-3 text-sm text-gray-500">
               <router-link :to="`/user/${fav.topic?.user_id}`" class="hover:text-blue-500">
@@ -55,6 +53,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 import { getUserDisplayName } from '@/utils/user'
+import TopicCard from '@/components/TopicCard.vue'
 
 const userStore = useUserStore()
 const loading = ref(false)

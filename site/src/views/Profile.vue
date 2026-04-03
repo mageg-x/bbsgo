@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
+    <div class= "bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
       <div class="h-48 bg-cover bg-center relative"
         :style="{ backgroundImage: `url(${user?.background || getUserBackground(user?.username)})` }">
         <div class="flex justify-end p-4">
@@ -119,13 +119,13 @@
         </div>
       </aside>
       <div class="flex-1 min-w-0">
-        <div class="bg-white rounded-lg shadow-sm">
+        <div class=" bg-slate-100 rounded-lg shadow-sm">
           <div class="p-4">
-            <div v-if="userTopics.length > 0" class="space-y-4">
-              <div v-for="topic in userTopics" :key="topic.id" class="border-b pb-4 last:border-b-0">
-                <div class="flex items-center justify-between mb-1">
+            <div v-if="userTopics.length > 0" class="space-y-3">
+              <div v-for="topic in userTopics" :key="topic.id"
+                class="bg-white rounded-lg border border-gray-100 p-4 hover:border-blue-200 hover:shadow-md transition-all">
+                <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center space-x-2">
-                    <span v-if="topic.is_user_pinned" class="text-xs text-red-500 font-medium">置顶</span>
                     <span class="text-sm text-gray-500">{{ getUserDisplayName(topic.user) }}</span>
                   </div>
                   <div class="flex items-center space-x-2">
@@ -137,9 +137,8 @@
                   </div>
                 </div>
                 <router-link :to="`/topic/${topic.id}`" class="block">
-                  <h3 class="text-lg font-medium text-gray-900 mb-2 hover:text-blue-500">{{ topic.title }}</h3>
+                  <TopicCard :topic="topic" />
                 </router-link>
-                <p class="text-gray-600 text-sm mb-3 line-clamp-3">{{ stripMarkdown(topic.content).substring(0, 200) }}</p>
                 <div class="flex items-center space-x-4 text-xs text-gray-500">
                   <span>👍 {{ topic.like_count || 0 }}</span>
                   <span>💬 {{ topic.comment_count || 0 }}</span>
@@ -185,7 +184,7 @@ import { useUserStore } from '@/stores/user'
 import api, { topicApi } from '@/api'
 import { uploadImage } from '@/utils/upload'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
-import { stripMarkdown } from '@/utils/markdown'
+import TopicCard from '@/components/TopicCard.vue'
 
 const route = useRoute()
 const router = useRouter()

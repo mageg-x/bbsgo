@@ -143,5 +143,36 @@ func GetFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.Success(w, favorites)
+	// 给每个 topic 添加 has_poll 字段
+	var topicIDs []uint
+	for _, fav := range favorites {
+		if fav.TopicID > 0 {
+			topicIDs = append(topicIDs, fav.TopicID)
+		}
+	}
+
+	// 批量查询投票存在的 topic IDs
+	hasPollMap := make(map[uint]bool)
+	if len(topicIDs) > 0 {
+		var polls []models.Poll
+		database.DB.Model(&models.Poll{}).Where("topic_id IN ?", topicIDs).Select("topic_id").Find(&polls)
+		for _, p := range polls {
+			hasPollMap[p.TopicID] = true
+		}
+	}
+
+	// 构建返回数据，添加 has_poll
+	type FavoriteWithPoll struct {
+		models.Favorite
+		TopicHasPoll bool `json:"topic_has_poll"`
+	}
+	var response []FavoriteWithPoll
+	for _, fav := range favorites {
+		response = append(response, FavoriteWithPoll{
+			Favorite:     fav,
+			TopicHasPoll: hasPollMap[fav.TopicID],
+		})
+	}
+
+	utils.Success(w, response)
 }
