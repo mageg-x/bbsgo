@@ -165,10 +165,11 @@
             'flex space-x-4 p-4 rounded-lg transition-all',
             post.is_best ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 shadow-md' : 'bg-gray-50'
           ]">
-          <img :src="getUserAvatar(post.user)" class="w-10 h-10 rounded-full">
+          
           <div class="flex-1">
             <div class="flex items-center justify-between mb-1">
               <div class="flex items-center space-x-2">
+                <img :src="getUserAvatar(post.user)" class="w-10 h-10 rounded-full">
                 <span v-if="post.is_best" class="px-2 py-0.5 text-xs font-bold bg-yellow-500 text-white rounded-full animate-pulse">最佳</span>
                 <span v-if="post.is_pinned" class="text-xs text-red-500 font-medium">置顶</span>
                 <SvgBadge v-if="post.is_best" type="gold-comment" :size="20" title="最佳评论" />
