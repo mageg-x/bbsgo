@@ -67,6 +67,7 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/user/favorites", handlers.GetFavorites).Methods("GET")        // 获取收藏列表
 	auth.HandleFunc("/user/follows", handlers.GetFollows).Methods("GET")            // 获取关注列表
 	auth.HandleFunc("/user/followers", handlers.GetFollowers).Methods("GET")        // 获取粉丝列表
+	auth.HandleFunc("/user/follow-topics", handlers.GetFollowTopics).Methods("GET") // 获取关注动态
 	auth.HandleFunc("/user/badges", handlers.GetUserBadges).Methods("GET")          // 获取用户勋章
 	auth.HandleFunc("/user/reports", handlers.GetUserReports).Methods("GET")        // 获取我的举报
 
@@ -77,11 +78,11 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT") // 作者置顶/取消置顶
 
 	// 评论操作
-	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                    // 创建评论
-	auth.HandleFunc("/comments/{id}", handlers.UpdateComment).Methods("PUT")                            // 更新评论
-	auth.HandleFunc("/comments/{id}", handlers.DeleteComment).Methods("DELETE")                         // 删除评论
-	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/pin", handlers.PinComment).Methods("PUT")  // 置顶/取消置顶评论
-	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/best", handlers.BestComment).Methods("PUT")   // 标记/取消最佳评论
+	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                      // 创建评论
+	auth.HandleFunc("/comments/{id}", handlers.UpdateComment).Methods("PUT")                              // 更新评论
+	auth.HandleFunc("/comments/{id}", handlers.DeleteComment).Methods("DELETE")                           // 删除评论
+	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/pin", handlers.PinComment).Methods("PUT")   // 置顶/取消置顶评论
+	auth.HandleFunc("/topics/{topic_id}/comments/{comment_id}/best", handlers.BestComment).Methods("PUT") // 标记/取消最佳评论
 
 	// 点赞操作
 	auth.HandleFunc("/likes", handlers.CreateLike).Methods("POST")      // 创建点赞
@@ -201,6 +202,13 @@ func SetupRoutes() *mux.Router {
 	admin.HandleFunc("/badges/{id}/users", handlers.GetBadgeUsers).Methods("GET") // 获取勋章用户列表
 	admin.HandleFunc("/badges/award", handlers.AwardBadge).Methods("POST")        // 授予勋章
 	admin.HandleFunc("/badges/{id}/revoke", handlers.RevokeBadge).Methods("PUT")  // 撤销勋章
+
+	admin.HandleFunc("/follows", handlers.GetAdminFollows).Methods("GET")              // 获取关注列表
+	admin.HandleFunc("/followers", handlers.GetAdminFollowers).Methods("GET")          // 获取粉丝列表
+	admin.HandleFunc("/follows/{id}", handlers.DeleteAdminFollow).Methods("DELETE")    // 删除关注
+
+	admin.HandleFunc("/best-comments", handlers.GetAdminBestComments).Methods("GET")            // 获取最佳评论列表
+	admin.HandleFunc("/comments/{id}/best", handlers.UpdateCommentBest).Methods("PUT")          // 更新最佳评论状态
 
 	return r
 }

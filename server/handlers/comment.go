@@ -7,6 +7,7 @@ import (
 	"bbsgo/services"
 	"bbsgo/utils"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,11 +82,11 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 	type CommentWithUserBadges struct {
 		models.Comment
 		User struct {
-			ID        uint                `json:"id"`
-			Username  string              `json:"username"`
-			Nickname  string              `json:"nickname"`
-			Avatar    string              `json:"avatar"`
-			Badges    []models.UserBadge  `json:"badges"`
+			ID       uint               `json:"id"`
+			Username string             `json:"username"`
+			Nickname string             `json:"nickname"`
+			Avatar   string             `json:"avatar"`
+			Badges   []models.UserBadge `json:"badges"`
 		} `json:"user"`
 	}
 
@@ -401,7 +402,6 @@ func PinComment(w http.ResponseWriter, r *http.Request) {
 // BestComment 标记/取消最佳评论处理器
 // 仅帖子作者可以操作
 func BestComment(w http.ResponseWriter, r *http.Request) {
-	// 验证用户登录
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("best comment: user not authenticated")
@@ -413,7 +413,6 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 	topicID, _ := strconv.Atoi(vars["topic_id"])
 	commentID, _ := strconv.Atoi(vars["comment_id"])
 
-	// 查询评论
 	var comment models.Comment
 	if err := database.DB.First(&comment, commentID).Error; err != nil {
 		log.Printf("best comment: comment not found, commentID: %d, error: %v", commentID, err)
@@ -421,14 +420,12 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 验证评论属于指定话题
 	if comment.TopicID != uint(topicID) {
 		log.Printf("best comment: comment does not belong to topic, commentID: %d, topicID: %d", commentID, topicID)
 		utils.Error(w, 400, "评论不属于该话题")
 		return
 	}
 
-	// 查询话题，验证是否为帖子作者
 	var topic models.Topic
 	if err := database.DB.First(&topic, topicID).Error; err != nil {
 		log.Printf("best comment: topic not found, topicID: %d, error: %v", topicID, err)
@@ -436,14 +433,12 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 仅帖子作者可以标记最佳评论
 	if topic.UserID != userID {
 		log.Printf("best comment: permission denied, topicID: %d, userID: %d", topicID, userID)
 		utils.Error(w, 403, "无权限操作")
 		return
 	}
 
-	// 解析请求体
 	var req struct {
 		Best bool `json:"best"`
 	}
@@ -453,16 +448,49 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 更新最佳评论状态
+	if req.Best {
+		if comment.UserID == userID {
+			log.Printf("best comment: cannot mark own comment as best, userID: %d", userID)
+			utils.Error(w, 400, "不能将自己的评论设为最佳评论")
+			return
+		}
+
+		var existingBest models.Comment
+		if err := database.DB.Where("topic_id = ? AND is_best = ? AND id != ?", topicID, true, commentID).First(&existingBest).Error; err == nil {
+			if err := database.DB.Model(&existingBest).UpdateColumn("is_best", false).Error; err != nil {
+				log.Printf("best comment: failed to clear previous best comment, commentID: %d, error: %v", existingBest.ID, err)
+				utils.Error(w, 500, "操作失败")
+				return
+			}
+			log.Printf("best comment: cleared previous best comment, commentID: %d", existingBest.ID)
+		}
+	}
+
 	if err := database.DB.Model(&comment).UpdateColumn("is_best", req.Best).Error; err != nil {
 		log.Printf("best comment: failed to update best status, commentID: %d, error: %v", commentID, err)
 		utils.Error(w, 500, "操作失败")
 		return
 	}
 
-	// 如果标记为最佳评论，触发评论作者的勋章检查
 	if req.Best {
 		go commentBadgeService.CheckAndAwardBadges(comment.UserID)
+		CreateNotification(
+			comment.UserID,
+			"best_comment",
+			"你的评论被设为最佳评论",
+			fmt.Sprintf("/topic/%d", topicID),
+		)
+		// 最佳评论积分奖励
+		var bestUser models.User
+		if err := database.DB.First(&bestUser, comment.UserID).Error; err == nil {
+			creditAmount := utils.GetConfigInt("credit_best_comment", 5)
+			bestUser.Credits += creditAmount
+			if err := database.DB.Save(&bestUser).Error; err != nil {
+				log.Printf("best comment: failed to add credits, userID: %d, error: %v", comment.UserID, err)
+			} else {
+				log.Printf("best comment: awarded %d credits to userID: %d", creditAmount, comment.UserID)
+			}
+		}
 	}
 
 	log.Printf("best comment: comment best updated, commentID: %d, is_best: %v", commentID, req.Best)

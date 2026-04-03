@@ -156,12 +156,16 @@
         本话题已关闭评论
       </div>
       <div class="space-y-4">
-        <div v-for="post in posts" :key="post.id" :id="'post-' + post.id"
-          class="flex space-x-4 p-4 bg-gray-50 rounded-lg">
+        <div v-for="post in sortedPosts" :key="post.id" :id="'post-' + post.id"
+          :class="[
+            'flex space-x-4 p-4 rounded-lg transition-all',
+            post.is_best ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 shadow-md' : 'bg-gray-50'
+          ]">
           <img :src="getUserAvatar(post.user)" class="w-10 h-10 rounded-full">
           <div class="flex-1">
             <div class="flex items-center justify-between mb-1">
               <div class="flex items-center space-x-2">
+                <span v-if="post.is_best" class="px-2 py-0.5 text-xs font-bold bg-yellow-500 text-white rounded-full animate-pulse">最佳</span>
                 <span v-if="post.is_pinned" class="text-xs text-red-500 font-medium">置顶</span>
                 <SvgBadge v-if="post.is_best" type="gold-comment" :size="20" title="最佳评论" />
                 <span class="font-medium text-gray-900">{{ getUserDisplayName(post.user) }}</span>
@@ -402,6 +406,16 @@ const canDeleteTopic = computed(() => {
   const isAuthor = topic.value.user_id === userStore.user?.id
   const isAdmin = userStore.user?.role === 2
   return isAuthor || isAdmin
+})
+
+const sortedPosts = computed(() => {
+  return [...posts.value].sort((a, b) => {
+    if (a.is_best && !b.is_best) return -1
+    if (!a.is_best && b.is_best) return 1
+    if (a.is_pinned && !b.is_pinned) return -1
+    if (!a.is_pinned && b.is_pinned) return 1
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
 })
 
 function canDeletePost(post) {

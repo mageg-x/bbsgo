@@ -60,6 +60,12 @@
             </span>
             <span class="menu-text">勋章管理</span>
           </router-link>
+          <router-link to="follows" class="menu-item" :class="{ active: route.name === 'Follows' }">
+            <span class="menu-icon pink">
+              <Heart :size="18" />
+            </span>
+            <span class="menu-text">关注管理</span>
+          </router-link>
         </div>
 
         <div class="menu-group">
@@ -148,7 +154,7 @@ import { useAdminStore } from '@/stores/admin'
 import api from '@/api'
 import {
   LayoutDashboard, User, Users, FolderOpen, FileText, MessageSquare,
-  Tag, AlertTriangle, Bell, Settings, Sliders, Key, LogOut, Calendar, Vote, Award
+  Tag, AlertTriangle, Bell, Settings, Sliders, Key, LogOut, Calendar, Vote, Award, Heart, Star
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -182,6 +188,8 @@ const pageTitle = computed(() => {
     'Polls': '投票管理',
     'Reports': '举报管理',
     'Announcements': '公告管理',
+    'Badges': '勋章管理',
+    'Follows': '关注管理',
     'Config': '网站配置',
     'Settings': '系统设置',
     'ChangePassword': '修改密码'

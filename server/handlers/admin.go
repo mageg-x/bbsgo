@@ -907,11 +907,11 @@ func MergeTags(w http.ResponseWriter, r *http.Request) {
 
 	// 将话题关联到目标标签
 	if len(topics) > 0 {
-		if err := database.DB.Model(&targetTag).Association("Topics").Append(topics).Error; err != nil {
+		if err := database.DB.Model(&targetTag).Association("Topics").Append(topics); err != nil {
 			log.Printf("merge tags: failed to append topics to target tag, error: %v", err)
 		}
 		// 清除源标签的关联
-		if err := database.DB.Model(&sourceTag).Association("Topics").Clear().Error; err != nil {
+		if err := database.DB.Model(&sourceTag).Association("Topics").Clear(); err != nil {
 			log.Printf("merge tags: failed to clear source tag associations, error: %v", err)
 		}
 	}

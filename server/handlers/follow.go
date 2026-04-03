@@ -95,6 +95,29 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	// 触发被关注者的勋章检查（因为增加了粉丝）
 	go followBadgeService.CheckAndAwardBadges(req.FollowUserID)
 
+	// 发送关注通知
+	var follower models.User
+	if err := database.DB.First(&follower, userID).Error; err == nil {
+		CreateNotification(
+			req.FollowUserID,
+			"follow",
+			"用户 "+follower.Username+" 关注了你",
+			"/user/"+strconv.FormatUint(uint64(userID), 10),
+		)
+	}
+
+	// 获得关注积分奖励
+	var followedUser models.User
+	if err := database.DB.First(&followedUser, req.FollowUserID).Error; err == nil {
+		creditAmount := utils.GetConfigInt("credit_follow", 1)
+		followedUser.Credits += creditAmount
+		if err := database.DB.Save(&followedUser).Error; err != nil {
+			log.Printf("create follow: failed to add credits, userID: %d, error: %v", req.FollowUserID, err)
+		} else {
+			log.Printf("create follow: awarded %d credits to userID: %d", creditAmount, req.FollowUserID)
+		}
+	}
+
 	log.Printf("create follow: follow created successfully, userID: %d, followUserID: %d", userID, req.FollowUserID)
 	utils.Success(w, follow)
 }

@@ -61,6 +61,17 @@ const routes = [
     component: () => import("@/views/Favorites.vue"),
     meta: { requiresAuth: true },
   },
+  {
+    path: "/user/:id/follows",
+    name: "FollowList",
+    component: () => import("@/views/FollowList.vue"),
+  },
+  {
+    path: "/follow-topics",
+    name: "FollowTopics",
+    component: () => import("@/views/FollowTopics.vue"),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({

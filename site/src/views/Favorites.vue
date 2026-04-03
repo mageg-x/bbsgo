@@ -28,6 +28,10 @@
               <router-link :to="`/user/${fav.topic?.user_id}`" class="hover:text-blue-500">
                 {{ getUserDisplayName(fav.topic?.user) }}
               </router-link>
+              <div v-if="getAuthorBadges(fav.topic).length > 0" class="flex items-center gap-0.5">
+                <SvgBadge v-for="badge in getAuthorBadges(fav.topic)" :key="badge.id"
+                  :type="badge.icon" :size="16" :title="badge.name" />
+              </div>
               <span v-if="fav.topic?.forum" class="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
                 {{ fav.topic.forum.name }}
               </span>
@@ -53,6 +57,8 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 import { getUserDisplayName } from '@/utils/user'
+import { getDisplayBadges } from '@/utils/badge'
+import SvgBadge from '@/components/SvgBadge.vue'
 import TopicCard from '@/components/TopicCard.vue'
 
 const userStore = useUserStore()
@@ -75,6 +81,12 @@ function formatTime(timeStr) {
   if (days < 30) return `${days}天前`
 
   return date.toLocaleDateString('zh-CN')
+}
+
+// 获取帖子作者的展示勋章（最多2枚）
+function getAuthorBadges(topic) {
+  if (!topic || !topic.author_badges || topic.author_badges.length === 0) return []
+  return getDisplayBadges(topic.author_badges, 'post-list')
 }
 
 async function loadFavorites() {

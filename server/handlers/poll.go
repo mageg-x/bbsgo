@@ -20,6 +20,7 @@ import (
 func CreatePoll(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
+		log.Printf("create poll: user not authenticated")
 		utils.Error(w, 401, "未认证")
 		return
 	}
@@ -37,22 +38,26 @@ func CreatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("create poll: failed to decode request body, error: %v", err)
 		utils.Error(w, 400, "无效的请求参数")
 		return
 	}
 
 	if req.TopicID == 0 {
+		log.Printf("create poll: topic ID is empty, userID: %d", userID)
 		utils.Error(w, 400, "话题ID不能为空")
 		return
 	}
 
 	if len(req.Options) < 2 || len(req.Options) > 10 {
+		log.Printf("create poll: invalid options count: %d, userID: %d", len(req.Options), userID)
 		utils.Error(w, 400, "选项数量必须在2-10个之间")
 		return
 	}
 
 	var topic models.Topic
 	if err := database.DB.First(&topic, req.TopicID).Error; err != nil {
+		log.Printf("create poll: topic not found, topicID: %d, error: %v", req.TopicID, err)
 		utils.Error(w, 404, "话题不存在")
 		return
 	}
@@ -60,6 +65,7 @@ func CreatePoll(w http.ResponseWriter, r *http.Request) {
 	if topic.UserID != userID {
 		var user models.User
 		if err := database.DB.First(&user, userID).Error; err != nil || user.Role < 1 {
+			log.Printf("create poll: permission denied, userID: %d, topicUserID: %d", userID, topic.UserID)
 			utils.Error(w, 403, "无权限创建投票")
 			return
 		}
@@ -67,6 +73,7 @@ func CreatePoll(w http.ResponseWriter, r *http.Request) {
 
 	var existingPoll models.Poll
 	if err := database.DB.Where("topic_id = ?", req.TopicID).First(&existingPoll).Error; err == nil {
+		log.Printf("create poll: poll already exists for topic, topicID: %d", req.TopicID)
 		utils.Error(w, 400, "该话题已存在投票")
 		return
 	}
@@ -76,6 +83,7 @@ func CreatePoll(w http.ResponseWriter, r *http.Request) {
 		pollType = "single"
 	}
 	if pollType != "single" && pollType != "multiple" {
+		log.Printf("create poll: invalid poll type: %s, userID: %d", pollType, userID)
 		utils.Error(w, 400, "投票类型无效")
 		return
 	}
@@ -92,10 +100,12 @@ func CreatePoll(w http.ResponseWriter, r *http.Request) {
 	if req.EndTime != "" {
 		t, err := time.Parse(time.RFC3339, req.EndTime)
 		if err != nil {
+			log.Printf("create poll: invalid end time format: %s, error: %v", req.EndTime, err)
 			utils.Error(w, 400, "截止时间格式无效")
 			return
 		}
 		if t.Before(time.Now()) {
+			log.Printf("create poll: end time is in the past: %s", req.EndTime)
 			utils.Error(w, 400, "截止时间不能早于当前时间")
 			return
 		}
@@ -144,6 +154,7 @@ func GetPoll(w http.ResponseWriter, r *http.Request) {
 
 	var poll models.Poll
 	if err := database.DB.Preload("Options").First(&poll, id).Error; err != nil {
+		log.Printf("get poll: poll not found, id: %d, error: %v", id, err)
 		utils.Error(w, 404, "投票不存在")
 		return
 	}
@@ -181,6 +192,7 @@ func GetPollByTopic(w http.ResponseWriter, r *http.Request) {
 
 	var poll models.Poll
 	if err := database.DB.Where("topic_id = ?", topicID).Preload("Options").First(&poll).Error; err != nil {
+		log.Printf("get poll by topic: poll not found, topicID: %d, error: %v", topicID, err)
 		utils.Error(w, 404, "该话题没有投票")
 		return
 	}
@@ -233,6 +245,7 @@ func tryGetUserIDFromRequest(r *http.Request) uint {
 func SubmitVote(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
+		log.Printf("submit vote: user not authenticated")
 		utils.Error(w, 401, "未认证")
 		return
 	}
@@ -243,43 +256,51 @@ func SubmitVote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("submit vote: failed to decode request body, error: %v", err)
 		utils.Error(w, 400, "无效的请求参数")
 		return
 	}
 
 	if req.PollID == 0 || len(req.OptionIDs) == 0 {
+		log.Printf("submit vote: incomplete params, pollID: %d, optionIDs count: %d", req.PollID, len(req.OptionIDs))
 		utils.Error(w, 400, "参数不完整")
 		return
 	}
 
 	var poll models.Poll
 	if err := database.DB.Preload("Options").First(&poll, req.PollID).Error; err != nil {
+		log.Printf("submit vote: poll not found, pollID: %d, error: %v", req.PollID, err)
 		utils.Error(w, 404, "投票不存在")
 		return
 	}
 
 	if poll.IsEnded {
+		log.Printf("submit vote: poll already ended, pollID: %d", poll.ID)
 		utils.Error(w, 400, "投票已结束")
 		return
 	}
 
 	if poll.EndTime != nil && poll.EndTime.Before(time.Now()) {
+		log.Printf("submit vote: poll deadline passed, pollID: %d, endTime: %v", poll.ID, poll.EndTime)
 		utils.Error(w, 400, "投票已截止")
 		return
 	}
 
 	var existingVote models.PollVote
 	if err := database.DB.Where("poll_id = ? AND user_id = ?", poll.ID, userID).First(&existingVote).Error; err == nil {
+		log.Printf("submit vote: user already voted, pollID: %d, userID: %d", poll.ID, userID)
 		utils.Error(w, 400, "您已经投过票了")
 		return
 	}
 
 	if poll.PollType == "single" && len(req.OptionIDs) > 1 {
+		log.Printf("submit vote: single poll with multiple options, pollID: %d, userID: %d", poll.ID, userID)
 		utils.Error(w, 400, "单选投票只能选择一个选项")
 		return
 	}
 
 	if poll.PollType == "multiple" && len(req.OptionIDs) > poll.MaxChoices {
+		log.Printf("submit vote: too many options selected, pollID: %d, userID: %d, selected: %d, max: %d", poll.ID, userID, len(req.OptionIDs), poll.MaxChoices)
 		utils.Error(w, 400, "选择的选项数量超过限制")
 		return
 	}
@@ -291,6 +312,7 @@ func SubmitVote(w http.ResponseWriter, r *http.Request) {
 
 	for _, optID := range req.OptionIDs {
 		if !optionMap[optID] {
+			log.Printf("submit vote: invalid option ID, pollID: %d, optionID: %d", poll.ID, optID)
 			utils.Error(w, 400, "无效的选项ID")
 			return
 		}
@@ -337,12 +359,14 @@ func SubmitVote(w http.ResponseWriter, r *http.Request) {
 func UpdatePoll(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
+		log.Printf("update poll: user not authenticated")
 		utils.Error(w, 401, "未认证")
 		return
 	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil || user.Role < 1 {
+		log.Printf("update poll: permission denied, userID: %d", userID)
 		utils.Error(w, 403, "无权限")
 		return
 	}
@@ -352,6 +376,7 @@ func UpdatePoll(w http.ResponseWriter, r *http.Request) {
 
 	var poll models.Poll
 	if err := database.DB.Preload("Options").First(&poll, id).Error; err != nil {
+		log.Printf("update poll: poll not found, id: %d, error: %v", id, err)
 		utils.Error(w, 404, "投票不存在")
 		return
 	}
@@ -368,6 +393,7 @@ func UpdatePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("update poll: failed to decode request body, error: %v", err)
 		utils.Error(w, 400, "无效的请求参数")
 		return
 	}
@@ -383,10 +409,12 @@ func UpdatePoll(w http.ResponseWriter, r *http.Request) {
 	if req.EndTime != "" {
 		t, err := time.Parse(time.RFC3339, req.EndTime)
 		if err != nil {
+			log.Printf("update poll: invalid end time format: %s, error: %v", req.EndTime, err)
 			utils.Error(w, 400, "截止时间格式无效")
 			return
 		}
 		if poll.EndTime != nil && t.Before(*poll.EndTime) {
+			log.Printf("update poll: cannot shorten end time, pollID: %d, currentEndTime: %v, newEndTime: %s", poll.ID, poll.EndTime, req.EndTime)
 			utils.Error(w, 400, "只能延长截止时间，不能缩短")
 			return
 		}
@@ -413,7 +441,7 @@ func UpdatePoll(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else {
-			database.DB.Where("poll_id = ?", poll.ID).Delete(&models.PollOption{})
+			database.DB.Unscoped().Where("poll_id = ?", poll.ID).Delete(&models.PollOption{})
 			for i, optReq := range req.Options {
 				if optReq.Text != "" {
 					option := models.PollOption{
@@ -435,12 +463,14 @@ func UpdatePoll(w http.ResponseWriter, r *http.Request) {
 func EndPoll(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
+		log.Printf("end poll: user not authenticated")
 		utils.Error(w, 401, "未认证")
 		return
 	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil || user.Role < 1 {
+		log.Printf("end poll: permission denied, userID: %d", userID)
 		utils.Error(w, 403, "无权限")
 		return
 	}
@@ -450,6 +480,7 @@ func EndPoll(w http.ResponseWriter, r *http.Request) {
 
 	var poll models.Poll
 	if err := database.DB.First(&poll, id).Error; err != nil {
+		log.Printf("end poll: poll not found, id: %d, error: %v", id, err)
 		utils.Error(w, 404, "投票不存在")
 		return
 	}
@@ -467,12 +498,14 @@ func EndPoll(w http.ResponseWriter, r *http.Request) {
 func DeletePoll(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
+		log.Printf("delete poll: user not authenticated")
 		utils.Error(w, 401, "未认证")
 		return
 	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil || user.Role < 1 {
+		log.Printf("delete poll: permission denied, userID: %d", userID)
 		utils.Error(w, 403, "无权限")
 		return
 	}
@@ -482,13 +515,14 @@ func DeletePoll(w http.ResponseWriter, r *http.Request) {
 
 	var poll models.Poll
 	if err := database.DB.First(&poll, id).Error; err != nil {
+		log.Printf("delete poll: poll not found, id: %d, error: %v", id, err)
 		utils.Error(w, 404, "投票不存在")
 		return
 	}
 
-	database.DB.Where("poll_id = ?", poll.ID).Delete(&models.PollVote{})
-	database.DB.Where("poll_id = ?", poll.ID).Delete(&models.PollOption{})
-	database.DB.Delete(&poll)
+	database.DB.Unscoped().Where("poll_id = ?", poll.ID).Delete(&models.PollVote{})
+	database.DB.Unscoped().Where("poll_id = ?", poll.ID).Delete(&models.PollOption{})
+	database.DB.Unscoped().Delete(&poll)
 
 	utils.Success(w, map[string]string{"message": "投票已删除"})
 }

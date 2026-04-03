@@ -41,10 +41,13 @@
               class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600">
               编辑资料
             </button>
-            <button v-else-if="userStore.isLoggedIn" @click="sendMessage"
-              class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600">
-              发私信
-            </button>
+            <template v-else-if="userStore.isLoggedIn">
+              <FollowButton :user-id="parseInt(route.params.id)" />
+              <button @click="sendMessage"
+                class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600">
+                发私信
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -63,14 +66,14 @@
                 <div class="text-2xl font-bold text-gray-700">{{ userStats.comment_count || 0 }}</div>
                 <div class="text-xs text-gray-400">评论</div>
               </div>
-              <div>
-                <div class="text-2xl font-bold text-gray-700">{{ user?.credits || 0 }}</div>
-                <div class="text-xs text-gray-400">积分</div>
-              </div>
-              <div>
-                <div class="text-2xl font-bold text-gray-700">{{ userStats.rank || 0 }}</div>
-                <div class="text-xs text-gray-400">注册排名</div>
-              </div>
+              <router-link :to="`/user/${user?.id}/follows?type=follows`" class="block hover:bg-gray-50 rounded">
+                <div class="text-2xl font-bold text-gray-700">{{ userStats.follow_count || 0 }}</div>
+                <div class="text-xs text-gray-400">关注</div>
+              </router-link>
+              <router-link :to="`/user/${user?.id}/follows?type=followers`" class="block hover:bg-gray-50 rounded">
+                <div class="text-2xl font-bold text-gray-700">{{ userStats.follower_count || 0 }}</div>
+                <div class="text-xs text-gray-400">粉丝</div>
+              </router-link>
             </div>
           </div>
           <div class="bg-white rounded-lg shadow-sm p-4">
@@ -146,6 +149,10 @@
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center space-x-2">
                     <span class="text-sm text-gray-500">{{ getUserDisplayName(topic.user) }}</span>
+                    <div v-if="getAuthorBadges(topic).length > 0" class="flex items-center gap-0.5">
+                      <SvgBadge v-for="badge in getAuthorBadges(topic)" :key="badge.id"
+                        :type="badge.icon" :size="16" :title="badge.name" />
+                    </div>
                   </div>
                   <div class="flex items-center space-x-2">
                     <button v-if="isCurrentUser" @click="toggleTopicPin(topic)"
@@ -206,6 +213,7 @@ import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 import { getDisplayBadges } from '@/utils/badge'
 import TopicCard from '@/components/TopicCard.vue'
 import SvgBadge from '@/components/SvgBadge.vue'
+import FollowButton from '@/components/FollowButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -214,7 +222,8 @@ const user = ref(null)
 const userStats = ref({
   topic_count: 0,
   comment_count: 0,
-  rank: 0
+  follow_count: 0,
+  follower_count: 0
 })
 const userTopics = ref([])
 const followers = ref([])
@@ -263,6 +272,12 @@ function getUserBackground(username) {
   }
   const imageId = (Math.abs(hash) % 1000) + 1
   return `https://picsum.photos/id/${imageId}/1200/400`
+}
+
+// 获取帖子作者的展示勋章（最多2枚）
+function getAuthorBadges(topic) {
+  if (!topic || !topic.author_badges || topic.author_badges.length === 0) return []
+  return getDisplayBadges(topic.author_badges, 'post-list')
 }
 
 function formatTime(time) {
@@ -487,6 +502,7 @@ onMounted(async () => {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

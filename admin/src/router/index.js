@@ -64,6 +64,11 @@ const routes = [
         component: () => import("@/views/Badges.vue"),
       },
       {
+        path: "follows",
+        name: "Follows",
+        component: () => import("@/views/FollowManagement.vue"),
+      },
+      {
         path: "config",
         name: "Config",
         component: () => import("@/views/Config.vue"),
