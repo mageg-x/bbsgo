@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <Bell :size="18" />
-              {{ t('announcement.list') }}
-            </h3>
             <span class="total-count">{{ t('announcement.totalAnnouncements').replace('%d', announcements.length) }}</span>
           </div>
           <el-button type="primary" @click="openCreateModal">

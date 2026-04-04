@@ -1,9 +1,10 @@
 <template>
-  <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">{{ t('antispam.title') }}</h1>
-      <p class="text-gray-600 mt-1">{{ t('antispam.title') }}</p>
-    </div>
+  <div class="antispam-page">
+    <el-card class="main-card">
+      <template #header>
+        <div class="card-header">
+        </div>
+      </template>
 
     <el-tabs v-model="activeTab" class="mb-6">
       <el-tab-pane :label="t('antispam.rateLimit')" name="rate">
@@ -90,6 +91,38 @@
               <el-button type="primary" @click="saveReputationConfig">{{ t('antispam.saveConfig') }}</el-button>
             </el-form-item>
           </el-form>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane :label="t('antispam.spamKeywords')" name="keywords">
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-medium mb-4">{{ t('antispam.spamKeywordsTitle') }}</h3>
+          <div class="flex gap-4 mb-4">
+            <el-input
+              v-model="newKeyword"
+              :placeholder="t('antispam.addKeywordPlaceholder')"
+              style="width: 300px"
+              @keyup.enter="addKeyword"
+            />
+            <el-button type="primary" @click="addKeyword">{{ t('antispam.addKeyword') }}</el-button>
+          </div>
+          <el-alert
+            :title="t('antispam.keywordTip')"
+            type="info"
+            :closable="false"
+            class="mb-4"
+          />
+          <el-table :data="keywordsDisplay" style="width: 100%">
+            <el-table-column prop="index" label="ID" width="80" />
+            <el-table-column prop="keyword" :label="t('antispam.keyword')" />
+            <el-table-column :label="t('common.actions')" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" type="danger" @click="deleteKeyword(row)">
+                  {{ t('common.delete') }}
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
       </el-tab-pane>
 
@@ -190,6 +223,7 @@
         <el-button type="primary" @click="adjustReputation">{{ t('antispam.confirm') }}</el-button>
       </template>
     </el-dialog>
+    </el-card>
   </div>
 </template>
 
@@ -198,6 +232,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { Shield } from 'lucide-vue-next'
 import api from '@/api'
 
 const { t } = useI18n()
@@ -245,6 +280,16 @@ const reputationForm = ref({
   reason: ''
 })
 
+const keywords = ref([])
+const newKeyword = ref('')
+
+const keywordsDisplay = computed(() => {
+  return keywords.value.map((kw, idx) => ({
+    index: idx + 1,
+    keyword: kw
+  }))
+})
+
 const filteredUsers = computed(() => {
   if (!userSearch.value) return users.value
   const search = userSearch.value.toLowerCase()
@@ -257,6 +302,7 @@ const filteredUsers = computed(() => {
 onMounted(() => {
   loadConfigs()
   loadUsers()
+  loadKeywords()
 })
 
 async function loadConfigs() {
@@ -311,6 +357,49 @@ async function saveConfig(config) {
   } catch (e) {
     ElMessage.error(t('antispam.saveFailed'))
     console.error(e)
+  }
+}
+
+async function loadKeywords() {
+  try {
+    const res = await api.get('/admin/antispam/keywords')
+    keywords.value = res.keywords || []
+  } catch (e) {
+    console.error('Load keywords failed', e)
+  }
+}
+
+async function addKeyword() {
+  if (!newKeyword.value.trim()) {
+    ElMessage.warning(t('antispam.pleaseEnterKeyword'))
+    return
+  }
+  try {
+    await api.post('/admin/antispam/keywords', { keyword: newKeyword.value.trim() })
+    ElMessage.success(t('antispam.addKeywordSuccess'))
+    newKeyword.value = ''
+    loadKeywords()
+  } catch (e) {
+    ElMessage.error(t('antispam.addKeywordFailed'))
+    console.error(e)
+  }
+}
+
+async function deleteKeyword(row) {
+  try {
+    await ElMessageBox.confirm(t('antispam.deleteKeywordConfirm'), t('common.warning'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning'
+    })
+    await api.delete('/admin/antispam/keywords', { data: { keyword: row.keyword } })
+    ElMessage.success(t('antispam.deleteKeywordSuccess'))
+    loadKeywords()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(t('antispam.deleteKeywordFailed'))
+      console.error(e)
+    }
   }
 }
 
@@ -400,3 +489,25 @@ async function unbanUser(user) {
   }
 }
 </script>
+
+<style scoped>
+.antispam-page {
+  max-width: 1400px;
+}
+
+.main-card {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.card-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+</style>

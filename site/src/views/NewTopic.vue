@@ -23,19 +23,15 @@
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <div class="mb-4 sm:mb-6">
             <label class="block text-gray-800 text-sm font-semibold mb-2">{{ t('newTopic.topicTitle') }}</label>
-            <input type="text" v-model="form.title"
-              class="w-full px-4 sm:px-5 py-2 text-[1rem] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all"
-              :placeholder="t('newTopic.titlePlaceholder')" required>
+            <el-input v-model="form.title"
+              :placeholder="t('newTopic.titlePlaceholder')" />
           </div>
 
           <div class="mb-4 sm:mb-6">
             <label class="block text-gray-800 text-sm font-semibold mb-2">{{ t('newTopic.selectForum') }}</label>
-            <select v-model="form.forum_id"
-              class="w-full px-4 sm:px-5 py-2 text-[1rem] border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all bg-white"
-              required>
-              <option value="" disabled selected>{{ t('newTopic.selectForumPlaceholder') }}</option>
-              <option v-for="forum in forums" :key="forum.id" :value="forum.id">{{ forum.name }}</option>
-            </select>
+            <el-select v-model="form.forum_id" :placeholder="t('newTopic.selectForumPlaceholder')" class="w-full">
+              <el-option v-for="forum in forums" :key="forum.id" :label="forum.name" :value="forum.id" />
+            </el-select>
           </div>
 
           <div class="mb-4 sm:mb-6">
@@ -55,11 +51,10 @@
                   </button>
                 </span>
               </div>
-              <input type="text" v-model="tagInput" @input="searchTags" @keydown.enter.prevent="addTag"
+              <el-input v-model="tagInput" @input="searchTags" @keydown.enter.prevent="addTag"
                 @keydown.down="navigateSuggestion(1)" @keydown.up="navigateSuggestion(-1)"
                 @keydown.escape="showSuggestions = false"
-                class="w-full px-4 sm:px-5 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all"
-                :placeholder="t('newTopic.tagInputPlaceholder')" :disabled="selectedTags.length >= 3">
+                :placeholder="t('newTopic.tagInputPlaceholder')" :disabled="selectedTags.length >= 3" />
               <div v-if="showSuggestions && suggestions.length > 0"
                 class="absolute z-20 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
                 <div v-for="(suggestion, index) in suggestions" :key="suggestion.id"
@@ -88,9 +83,8 @@
             <div>
               <label class="block text-gray-700 text-sm font-medium mb-2">{{ t('newTopic.pollTitle') }} <span
                   class="text-gray-400 font-normal">{{ t('newTopic.pollTitleTip') }}</span></label>
-              <input type="text" v-model="pollForm.title"
-                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
-                :placeholder="t('newTopic.pollTitlePlaceholder')">
+              <el-input v-model="pollForm.title"
+                :placeholder="t('newTopic.pollTitlePlaceholder')" />
             </div>
 
             <div>
@@ -98,8 +92,7 @@
                   class="text-gray-400 font-normal">{{ t('newTopic.pollOptionsTip') }}</span></label>
               <div class="space-y-2">
                 <div v-for="(option, index) in pollForm.options" :key="index" class="flex gap-2">
-                  <input type="text" v-model="pollForm.options[index]"
-                    class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                  <el-input v-model="pollForm.options[index]"
                     :placeholder="t('newTopic.optionPlaceholder', { index: index + 1 })" />
                   <button type="button" @click="removePollOption(index)" v-if="pollForm.options.length > 2"
                     class="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
@@ -120,24 +113,22 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-gray-700 text-sm font-medium mb-2">{{ t('newTopic.pollType') }}</label>
-                <select v-model="pollForm.poll_type"
-                  class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white">
-                  <option value="single">{{ t('newTopic.singleChoice') }}</option>
-                  <option value="multiple">{{ t('newTopic.multipleChoice') }}</option>
-                </select>
+                <el-select v-model="pollForm.poll_type" class="w-full">
+                  <el-option :label="t('newTopic.singleChoice')" value="single" />
+                  <el-option :label="t('newTopic.multipleChoice')" value="multiple" />
+                </el-select>
               </div>
               <div v-if="pollForm.poll_type === 'multiple'">
                 <label class="block text-gray-700 text-sm font-medium mb-2">{{ t('newTopic.maxChoices') }}</label>
-                <input type="number" v-model.number="pollForm.max_choices" min="2" :max="pollForm.options.length"
-                  class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+                <el-input-number v-model="pollForm.max_choices" :min="2" :max="pollForm.options.length" class="w-full" />
               </div>
             </div>
 
             <div>
               <label class="block text-gray-700 text-sm font-medium mb-2">{{ t('newTopic.endTime') }} <span
                   class="text-gray-400 font-normal">{{ t('newTopic.endTimeTip') }}</span></label>
-              <input type="datetime-local" v-model="pollForm.end_time"
-                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+              <el-date-picker v-model="pollForm.end_time" type="datetime" :placeholder="t('newTopic.endTimePlaceholder')"
+                class="w-full" />
             </div>
           </div>
         </div>
@@ -273,6 +264,7 @@ import 'katex/dist/katex.css'
 import api, { pollApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { uploadImage, uploadVideo } from '@/utils/upload'
+import { getErrorI18nKey } from '@/utils/error'
 
 const { t } = useI18n()
 
@@ -299,7 +291,6 @@ function createResizePlugin() {
       }
 
       const makeResizable = (element) => {
-        // 创建容器来包装元素和手柄
         const container = document.createElement('div')
         container.className = 'resize-container'
         container.style.position = 'relative'
@@ -309,13 +300,11 @@ function createResizePlugin() {
         container.style.padding = '2px'
         container.style.transition = 'all 0.2s ease'
 
-        // 移动元素到容器中
         if (element.parentNode) {
           element.parentNode.insertBefore(container, element)
           container.appendChild(element)
         }
 
-        // 创建尺寸显示
         const sizeDisplay = document.createElement('div')
         sizeDisplay.className = 'size-display'
         sizeDisplay.style.position = 'absolute'
@@ -332,7 +321,6 @@ function createResizePlugin() {
         sizeDisplay.textContent = `${element.offsetWidth} x ${element.offsetHeight}`
         container.appendChild(sizeDisplay)
 
-        // 创建四个角的调整点
         const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
         const cursors = ['nwse-resize', 'nesw-resize', 'nesw-resize', 'nwse-resize']
 
@@ -349,7 +337,6 @@ function createResizePlugin() {
           handle.style.zIndex = '20'
           handle.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.3)'
 
-          // 设置位置
           if (corner.includes('top')) {
             handle.style.top = '-6px'
           } else {
@@ -363,7 +350,6 @@ function createResizePlugin() {
 
           container.appendChild(handle)
 
-          // 添加拖拽功能
           let isResizing = false
           let startX, startY, startWidth, startHeight
 
@@ -417,17 +403,14 @@ function createResizePlugin() {
 
           console.log('调整图片大小:', { src, alt, width, height })
 
-          // 使用正则表达式匹配 Markdown 图片语法 ![alt](src) 或 ![alt](src "title")
           const mdRegex = new RegExp(`!\\[([^\\]]*)\\]\\(${src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s+"[^"]*")?\\)`, 'i')
           const mdMatch = currentContent.match(mdRegex)
 
           if (mdMatch) {
             console.log('找到 Markdown 图片:', mdMatch[0])
-            // 替换 Markdown 为 HTML img 标签
             const imgTag = `<img src="${src}" alt="${alt}" width="${width}" height="${height}" style="max-width: 100%; border-radius: 8px; display: block; margin: 1rem 0;">`
             updatedContent = currentContent.replace(mdRegex, imgTag)
           } else {
-            // 如果没有找到 Markdown，尝试匹配现有的 <img> 标签
             const imgRegex = new RegExp(`<img\\s+[^>]*src=["']${src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>`, 'i')
             const imgMatch = currentContent.match(imgRegex)
 
@@ -444,7 +427,6 @@ function createResizePlugin() {
 
           console.log('调整视频大小:', { src, width, height })
 
-          // 匹配 <video> 标签
           const videoRegex = new RegExp(`<video\\s+[^>]*src=["']${src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>\\s*</video>`, 'i')
           const videoMatch = currentContent.match(videoRegex)
 
@@ -580,7 +562,7 @@ async function handleImageFileSelect(event) {
     form.value.content += `\n${imgTag}\n`
   } catch (error) {
     console.error('Image upload error:', error)
-    ElMessage.error(t('topic.imageUploadFailed'))
+    ElMessage.error(t(getErrorI18nKey(error?.code)))
   } finally {
     event.target.value = ''
   }
@@ -591,7 +573,6 @@ async function handleVideoFileSelect(event) {
   const file = event.target.files[0]
   if (!file) return
 
-  // 检查文件大小（50MB）
   if (file.size > 50 * 1024 * 1024) {
     ElMessage.warning(t('topic.videoSizeWarning'))
     event.target.value = ''
@@ -620,7 +601,7 @@ async function handleVideoFileSelect(event) {
     if (error.message && error.message.startsWith('FILE_TOO_LARGE')) {
       ElMessage.warning(t('topic.videoSizeWarning'))
     } else {
-      ElMessage.error(t('topic.videoUploadFailed'))
+      ElMessage.error(t(getErrorI18nKey(error?.code)))
     }
   } finally {
     videoUploading.value = false
@@ -644,15 +625,13 @@ async function handleUploadImage(files) {
 
     ElMessage.success(t('topic.imageUploadSuccess'))
 
-    // 直接插入 HTML img 标签而不是 Markdown 语法
     const imgTag = `<img src="${url}" alt="${file.name}" style="max-width: 100%; border-radius: 8px; display: block; margin: 1rem 0;">`
     form.value.content += `\n${imgTag}\n`
 
-    // 返回空数组，因为我们已经手动插入了内容
     return []
   } catch (error) {
     console.error('Image upload error:', error)
-    ElMessage.error(t('topic.imageUploadFailed'))
+    ElMessage.error(t(getErrorI18nKey(error?.code)))
     return []
   }
 }
@@ -661,7 +640,6 @@ async function handleUploadVideo(files) {
   const file = files[0]
   if (!file) return []
 
-  // 检查文件大小（50MB）
   if (file.size > 50 * 1024 * 1024) {
     ElMessage.warning(t('topic.videoSizeWarning'))
     return []
@@ -692,7 +670,7 @@ async function handleUploadVideo(files) {
     if (error.message && error.message.startsWith('FILE_TOO_LARGE')) {
       ElMessage.warning(t('topic.videoSizeWarning'))
     } else {
-      ElMessage.error(t('topic.videoUploadFailed'))
+      ElMessage.error(t(getErrorI18nKey(error?.code)))
     }
     return []
   } finally {
@@ -706,6 +684,7 @@ async function loadForums() {
     forums.value = res || []
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -726,6 +705,7 @@ function searchTags() {
       suggestionIndex.value = -1
     } catch (e) {
       console.error(e)
+      ElMessage.error(t(getErrorI18nKey(e?.code)))
     }
   }, 300)
 }
@@ -841,7 +821,7 @@ async function handleSubmit() {
     }, 1500)
   } catch (error) {
     console.error(error)
-    ElMessage.error(error.response?.data?.message || t('newTopic.publishFailed'))
+    ElMessage.error(t(getErrorI18nKey(error?.code)))
   } finally {
     submitting.value = false
   }
@@ -849,13 +829,11 @@ async function handleSubmit() {
 
 onMounted(() => {
   loadForums()
-  // 强制设置编辑器模式为双栏
   setTimeout(() => {
     editorMode.value = 'auto'
   }, 100)
 })
 
-// 调试 content 变化
 watch(() => form.value.content, (val) => {
   console.log('content changed:', val)
 })

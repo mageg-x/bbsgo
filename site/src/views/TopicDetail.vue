@@ -360,6 +360,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 import { renderMarkdown } from '@/utils/markdown'
 import { getDisplayBadges } from '@/utils/badge'
+import { getErrorI18nKey } from '@/utils/error'
 import QRCode from 'qrcode'
 import SvgBadge from '@/components/SvgBadge.vue'
 
@@ -964,7 +965,11 @@ async function submitPost() {
     replyTo.value = null
     replyToUser.value = null
     loadTopic()
+    ElMessage.success(t('topic.commentSuccess'))
   } catch (e) {
+    // 根据错误码显示具体错误信息
+    const errorKey = getErrorI18nKey(e.code)
+    ElMessage.error(t(errorKey))
     console.error(e)
   }
 }

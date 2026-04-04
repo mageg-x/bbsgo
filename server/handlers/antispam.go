@@ -221,3 +221,49 @@ func GetAntiSpamStats(w http.ResponseWriter, r *http.Request) {
 		"pending_reports":   pendingReports,
 	})
 }
+
+// GetSpamKeywords 获取敏感词列表
+func GetSpamKeywords(w http.ResponseWriter, r *http.Request) {
+	spamService := antispam.GetSpamKeywordService()
+	keywords := spamService.GetKeywords()
+	errors.Success(w, map[string]interface{}{
+		"keywords": keywords,
+		"count":    len(keywords),
+	})
+}
+
+// AddSpamKeyword 添加敏感词
+func AddSpamKeyword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Keyword string `json:"keyword"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errors.Error(w, errors.CodeInvalidParams, "")
+		return
+	}
+	if req.Keyword == "" {
+		errors.Error(w, errors.CodeInvalidParams, "")
+		return
+	}
+	spamService := antispam.GetSpamKeywordService()
+	spamService.AddKeyword(req.Keyword)
+	errors.Success(w, map[string]string{"message": "敏感词添加成功"})
+}
+
+// DeleteSpamKeyword 删除敏感词
+func DeleteSpamKeyword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Keyword string `json:"keyword"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errors.Error(w, errors.CodeInvalidParams, "")
+		return
+	}
+	if req.Keyword == "" {
+		errors.Error(w, errors.CodeInvalidParams, "")
+		return
+	}
+	spamService := antispam.GetSpamKeywordService()
+	spamService.RemoveKeyword(req.Keyword)
+	errors.Success(w, map[string]string{"message": "敏感词删除成功"})
+}

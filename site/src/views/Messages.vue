@@ -252,6 +252,7 @@ async function loadConversations() {
     })
   } catch (e) {
     console.error(t('messages.loadFailed'), e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -268,7 +269,7 @@ async function loadMessages(userId) {
     scrollToBottom()
   } catch (e) {
     console.error(t('messages.loadFailed'), e)
-    ElMessage.error(t('messages.loadFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -294,7 +295,7 @@ async function sendMessage() {
     }
   } catch (e) {
     console.error(t('messages.sendFailed'), e)
-    ElMessage.error(t('messages.sendFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -324,6 +325,7 @@ function handleSearchUser() {
       })
     } catch (e) {
       console.error(t('messages.searchFailed'), e)
+      ElMessage.error(t(getErrorI18nKey(e?.code)))
       searchResults.value = []
     } finally {
       searching.value = false
@@ -378,7 +380,7 @@ onMounted(async () => {
         }
       } catch (e) {
         console.error(t('messages.cannotSend'), e)
-        ElMessage.error(t('messages.cannotSend'))
+        ElMessage.error(t(getErrorI18nKey(e?.code)))
         return
       }
     }

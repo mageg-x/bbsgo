@@ -25,6 +25,8 @@ export default {
   2005: 'errors.notFollowed',
   2006: 'errors.creditsInsufficient',
   2007: 'errors.reputationLow',
+  2008: 'errors.unauthorized',
+  2009: 'errors.userBanned',
 
   // 3xxx - 内容操作类
   3001: 'errors.topicNotFound',
@@ -51,6 +53,13 @@ export default {
   4011: 'errors.fileSizeExceeded',
   4012: 'errors.fileTypeUnsupported',
   4013: 'errors.imageSizeExceeded',
+  4014: 'errors.contentTooShort',
+  4015: 'errors.operationTooFast',
+  4016: 'errors.dailyLimitExceeded',
+  4017: 'errors.noSubstantiveContent',
+  4018: 'errors.symbolsOrEmojiOnly',
+  4019: 'errors.repeatingChars',
+  4020: 'errors.tooManyLinks',
 
   // 5xxx - 系统错误类
   5001: 'errors.serverInternal',

@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <Tag :size="18" />
-              {{ t('tag.title') }}
-            </h3>
           </div>
           <el-button type="primary" @click="openAddModal">
             <Plus :size="16" />

@@ -22,10 +22,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <Users :size="18" />
-              {{ t('user.title') }}
-            </h3>
             <span class="total-count">{{ t('user.totalUsers').replace('%d', total) }}</span>
           </div>
           <div class="header-right">

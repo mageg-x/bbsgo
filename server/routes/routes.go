@@ -182,6 +182,9 @@ func SetupRoutes() *mux.Router {
 	admin.HandleFunc("/antispam/config", handlers.GetAntiSpamConfig).Methods("GET")        // 获取防刷配置
 	admin.HandleFunc("/antispam/config", handlers.UpdateAntiSpamConfig).Methods("POST")   // 更新防刷配置
 	admin.HandleFunc("/antispam/stats", handlers.GetAntiSpamStats).Methods("GET")         // 获取防刷统计
+	admin.HandleFunc("/antispam/keywords", handlers.GetSpamKeywords).Methods("GET")        // 获取敏感词列表
+	admin.HandleFunc("/antispam/keywords", handlers.AddSpamKeyword).Methods("POST")       // 添加敏感词
+	admin.HandleFunc("/antispam/keywords", handlers.DeleteSpamKeyword).Methods("DELETE")   // 删除敏感词
 	admin.HandleFunc("/users/{id}/reputation", handlers.AdjustUserReputation).Methods("POST") // 调整用户信誉分
 	admin.HandleFunc("/users/{id}/unban", handlers.UnbanUser).Methods("POST")             // 解禁用户
 	admin.HandleFunc("/users/{id}/ban-status", handlers.GetUserBanStatus).Methods("GET")  // 获取用户禁言状态

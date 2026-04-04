@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <Vote :size="18" />
-              {{ t('poll.title') }}
-            </h3>
             <span class="total-count">{{ t('poll.totalPolls').replace('%d', total) }}</span>
           </div>
           <div class="header-right">

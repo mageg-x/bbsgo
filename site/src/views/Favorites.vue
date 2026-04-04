@@ -60,6 +60,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 import { getUserDisplayName } from '@/utils/user'
 import { getDisplayBadges } from '@/utils/badge'
+import { getErrorI18nKey } from '@/utils/error'
 import SvgBadge from '@/components/SvgBadge.vue'
 import TopicCard from '@/components/TopicCard.vue'
 
@@ -99,7 +100,7 @@ async function loadFavorites() {
     favorites.value = res || []
   } catch (e) {
     console.error(e)
-    ElMessage.error(t('favorites.loadFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   } finally {
     loading.value = false
   }
@@ -122,7 +123,7 @@ async function removeFavorite(fav) {
     ElMessage.success(t('favorites.removed'))
   } catch (e) {
     console.error(e)
-    ElMessage.error(t('favorites.removeFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 

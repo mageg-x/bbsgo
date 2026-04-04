@@ -108,12 +108,13 @@ const (
 	// 2xxx - 用户相关类
 	CodeUserNotFound      = 2001 // 用户不存在
 	CodeNoPermission     = 2002 // 无权限操作
-	CodeUnauthorized      = 2008 // 未认证，请先登录
 	CodeCannotFollowSelf  = 2003 // 无法关注自己
 	CodeAlreadyFollowed  = 2004 // 已经关注过
 	CodeNotFollowed      = 2005 // 尚未关注该用户
 	CodeCreditsInsufficient = 2006 // 积分不足
 	CodeReputationLow     = 2007 // 信誉分过低
+	CodeUnauthorized      = 2008 // 未认证，请先登录
+	CodeUserBanned        = 2009 // 用户已被禁言
 
 	// 3xxx - 内容操作类
 	CodeTopicNotFound   = 3001 // 话题不存在
@@ -140,6 +141,13 @@ const (
 	CodeFileSizeExceeded   = 4011 // 文件大小超出限制
 	CodeFileTypeUnsupported = 4012 // 文件类型不支持
 	CodeImageSizeExceeded  = 4013 // 图片尺寸超出限制
+	CodeContentTooShort   = 4014 // 内容太短
+	CodeOperationTooFast   = 4015 // 操作过快，请稍后再试
+	CodeDailyLimitExceeded = 4016 // 今日操作次数已达上限
+	CodeNoSubstantiveContent = 4017 // 内容无实质信息
+	CodeSymbolsOrEmojiOnly  = 4018 // 内容仅包含符号或表情
+	CodeRepeatingChars      = 4019 // 内容包含重复字符
+	CodeTooManyLinks       = 4020 // 内容包含过多外部链接
 
 	// 5xxx - 系统错误类
 	CodeServerInternal = 5001 // 服务器内部错误
@@ -166,6 +174,7 @@ var CodeMessages = map[int]string{
 	CodeUserNotFound:         "用户不存在",
 	CodeNoPermission:        "无权限操作",
 	CodeUnauthorized:        "未认证，请先登录",
+	CodeUserBanned:           "用户已被禁言",
 	CodeCannotFollowSelf:     "无法关注自己",
 	CodeAlreadyFollowed:      "已经关注过",
 	CodeNotFollowed:          "尚未关注该用户",
@@ -193,6 +202,13 @@ var CodeMessages = map[int]string{
 	CodeFileSizeExceeded:     "文件大小超出限制",
 	CodeFileTypeUnsupported:  "文件类型不支持",
 	CodeImageSizeExceeded:    "图片尺寸超出限制",
+	CodeContentTooShort:     "内容太短",
+	CodeOperationTooFast:   "操作过快，请稍后再试",
+	CodeDailyLimitExceeded:  "今日操作次数已达上限",
+	CodeNoSubstantiveContent: "内容无实质信息",
+	CodeSymbolsOrEmojiOnly:  "内容仅包含符号或表情",
+	CodeRepeatingChars:      "内容包含重复字符",
+	CodeTooManyLinks:       "内容包含过多外部链接",
 	CodeServerInternal:       "服务器内部错误",
 	CodeDatabaseError:        "数据库操作失败",
 	CodeUploadFailed:         "文件上传失败",

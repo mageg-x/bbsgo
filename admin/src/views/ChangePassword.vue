@@ -3,10 +3,6 @@
     <el-card class="main-card">
       <template #header>
         <div class="card-header">
-          <h3>
-            <Key :size="18" />
-            {{ t('password.title') }}
-          </h3>
         </div>
       </template>
 

@@ -1,15 +1,19 @@
 <template>
   <div class="follow-management">
-    <div class="header">
-      <h2>{{ t('follow.title') }}</h2>
-      <div class="search-box">
-        <el-input v-model="searchKeyword" :placeholder="t('follow.searchPlaceholder')" @keyup.enter="handleSearch" clearable>
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-      </div>
-    </div>
+    <el-card class="main-card">
+      <template #header>
+        <div class="card-header">
+          <div class="header-left">
+          </div>
+          <div class="header-right">
+            <el-input v-model="searchKeyword" :placeholder="t('follow.searchPlaceholder')" @keyup.enter="handleSearch" clearable style="width: 300px">
+              <template #prefix>
+                <Search :size="16" />
+              </template>
+            </el-input>
+          </div>
+        </div>
+      </template>
 
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
       <el-tab-pane :label="t('follow.followList')" name="follows">
@@ -93,7 +97,7 @@
       </el-tab-pane>
     </el-tabs>
 
-    <div class="pagination">
+    <div class="pagination-wrapper">
       <el-pagination
         v-model:current-page="currentPage"
         :page-size="pageSize"
@@ -102,6 +106,7 @@
         @current-change="handlePageChange"
       />
     </div>
+    </el-card>
   </div>
 </template>
 
@@ -109,7 +114,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Users } from 'lucide-vue-next'
 import api from '@/api'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 
@@ -224,24 +229,43 @@ onMounted(() => {
 
 <style scoped>
 .follow-management {
-  padding: 20px;
+  max-width: 1400px;
 }
 
-.header {
+.main-card {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.header h2 {
-  margin: 0;
-  font-size: 20px;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-left h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
   font-weight: 600;
+  color: #1f2937;
+  margin: 0;
 }
 
-.search-box {
-  width: 300px;
+.header-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .user-info {
@@ -263,12 +287,22 @@ onMounted(() => {
 
 .user-id {
   font-size: 12px;
-  color: #999;
+  color: #9ca3af;
 }
 
-.pagination {
+.pagination-wrapper {
   margin-top: 20px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+}
+
+:deep(.el-table) {
+  --el-table-border-color: #f3f4f6;
+  --el-table-header-bg-color: #f9fafb;
+}
+
+:deep(.el-table th) {
+  font-weight: 600;
+  color: #374151;
 }
 </style>

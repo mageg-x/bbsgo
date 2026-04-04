@@ -180,6 +180,7 @@ const (
 	ConfigLowReputationThreshold     = "low_reputation_threshold"
 	ConfigBanLowReputation           = "ban_low_reputation"
 	ConfigBanReputationThreshold     = "ban_reputation_threshold"
+	ConfigSpamKeywords             = "spam_keywords"
 )
 
 // GetDefaultConfigs 获取默认配置项

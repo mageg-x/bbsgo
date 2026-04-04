@@ -33,7 +33,7 @@
             </button>
           </div>
           <div class="flex-1 min-w-0">
-            <h1 class="text-lg sm:text-xl font-bold text-gray-900">{{ getUserDisplayName(user) }}</h1>
+            <h1 class="text-lg sm:text-xl font-bold text-gray-900">{{ getUserDisplayName(user, t) }}</h1>
             <p class="text-gray-500 text-xs sm:text-sm mt-1">{{ user?.signature || t('topic.noSignature') }}</p>
           </div>
           <div class="flex gap-2">
@@ -105,7 +105,7 @@
             <div class="space-y-2 lg:space-y-3">
               <div class="flex">
                 <span class="w-16 lg:w-20 text-gray-500 text-xs sm:text-sm">{{ t('topic.nickname') }}</span>
-                <span class="text-gray-900 text-xs sm:text-sm">{{ getUserDisplayName(user) }}</span>
+                <span class="text-gray-900 text-xs sm:text-sm">{{ getUserDisplayName(user, t) }}</span>
               </div>
               <div class="flex">
                 <span class="w-16 lg:w-20 text-gray-500 text-xs sm:text-sm">{{ t('topic.signature') }}</span>
@@ -126,7 +126,7 @@
               <div v-for="follower in followers" :key="follower.id" class="flex items-center space-x-2">
                 <img :src="getUserAvatar(follower.user)" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-200 flex-shrink-0">
                 <div class="flex-1 min-w-0">
-                  <div class="text-xs sm:text-sm font-medium text-gray-900 truncate">{{ getUserDisplayName(follower.user) }}
+                  <div class="text-xs sm:text-sm font-medium text-gray-900 truncate">{{ getUserDisplayName(follower.user, t) }}
                   </div>
                   <div class="text-xs text-gray-400 truncate">{{ follower.user?.signature || t('topic.noSignature') }}</div>
                 </div>
@@ -147,7 +147,7 @@
                 class="bg-white rounded-lg border border-gray-100 p-3 sm:p-4 hover:border-blue-200 hover:shadow-md transition-all">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center space-x-2">
-                    <span class="text-xs sm:text-sm text-gray-500">{{ getUserDisplayName(topic.user) }}</span>
+                    <span class="text-xs sm:text-sm text-gray-500">{{ getUserDisplayName(topic.user, t) }}</span>
                     <div v-if="getAuthorBadges(topic).length > 0" class="flex items-center gap-0.5">
                       <SvgBadge v-for="badge in getAuthorBadges(topic)" :key="badge.id"
                         :type="badge.icon" :size="14" :title="badge.name" />
@@ -232,6 +232,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { getErrorI18nKey } from '@/utils/error'
 
 const { t } = useI18n()
 import api, { topicApi } from '@/api'
@@ -337,7 +338,7 @@ async function handleBackgroundUpload(event) {
     await updateProfile({ background: url })
   } catch (error) {
     console.error('Background upload error:', error)
-    ElMessage.error(t('topic.backgroundUpdated') + ' ' + t('common.failed'))
+    ElMessage.error(t(getErrorI18nKey(error?.code)))
   }
 
   event.target.value = ''
@@ -365,7 +366,7 @@ async function handleAvatarUpload(event) {
     await updateProfile({ avatar: url })
   } catch (error) {
     console.error('Avatar upload error:', error)
-    ElMessage.error(t('topic.avatarUpdated') + ' ' + t('common.failed'))
+    ElMessage.error(t(getErrorI18nKey(error?.code)))
   }
 
   event.target.value = ''
@@ -408,7 +409,7 @@ async function handleSaveProfile() {
     showEditDialog.value = false
     ElMessage.success(t('topic.profileUpdated'))
   } catch (error) {
-    ElMessage.error(t('topic.profileUpdateFailed'))
+    ElMessage.error(t(getErrorI18nKey(error?.code)))
   } finally {
     saving.value = false
   }
@@ -447,7 +448,7 @@ async function toggleTopicPin(topic) {
   } catch (e) {
     if (e !== 'cancel') {
       console.error('Operation failed', e)
-      ElMessage.error(t('common.operationFailed'))
+      ElMessage.error(t(getErrorI18nKey(e?.code)))
     }
   }
 }
@@ -459,6 +460,7 @@ async function loadUser() {
     user.value = res
   } catch (e) {
     console.error('加载用户信息失败', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -469,6 +471,7 @@ async function loadUserTopics() {
     userTopics.value = res?.list || []
   } catch (e) {
     console.error('加载用户帖子失败', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -479,6 +482,7 @@ async function loadFollowers() {
     followers.value = res?.list || []
   } catch (e) {
     console.error('加载粉丝列表失败', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -493,6 +497,7 @@ async function loadUserStats() {
     }
   } catch (e) {
     console.error('加载用户统计失败', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -503,6 +508,7 @@ async function loadUserBadges() {
     userBadges.value = res || []
   } catch (e) {
     console.error('加载用户勋章失败', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -526,7 +532,7 @@ async function toggleLike(topic) {
     topic.liked = !topic.liked
   } catch (e) {
     console.error(e)
-    ElMessage.error(t('common.operationFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -546,6 +552,7 @@ async function checkTopicLikes() {
     }
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 

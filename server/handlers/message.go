@@ -134,11 +134,13 @@ func SendMessage(w http.ResponseWriter, r *http.Request) {
 
 	// 创建通知
 	notification := models.Notification{
-		UserID:  req.ToUserID,
-		Type:    "message",
-		Content: "您收到了一条新私信",
-		Link:    "/messages",
-		IsRead:  false,
+		UserID:      req.ToUserID,
+		Type:        "message",
+		Content:     "notifications.new_message",
+		Link:        "/messages",
+		RelatedID:   message.ID,
+		RelatedType: "message",
+		IsRead:      false,
 	}
 	if err := database.DB.Create(&notification).Error; err != nil {
 		log.Printf("send message: failed to create notification, toUserID: %d, error: %v", req.ToUserID, err)

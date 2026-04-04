@@ -48,6 +48,14 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
 
+	// 检查当前用户是否存在
+	var currentUser models.User
+	if err := database.DB.First(&currentUser, userID).Error; err != nil {
+		log.Printf("create follow: current user not found, userID: %d, error: %v", userID, err)
+		errors.Error(w, errors.CodeUserNotFound, "")
+		return
+	}
+
 	// 解析请求体
 	var req struct {
 		FollowUserID uint `json:"follow_user_id"` // 要关注的用户ID
@@ -99,11 +107,13 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	// 发送关注通知
 	var follower models.User
 	if err := database.DB.First(&follower, userID).Error; err == nil {
-		CreateNotification(
+		CreateNotificationWithRelated(
 			req.FollowUserID,
 			"follow",
-			"用户 "+follower.Username+" 关注了你",
+			"notifications.user_followed_you",
 			"/user/"+strconv.FormatUint(uint64(userID), 10),
+			userID,
+			"user",
 		)
 	}
 

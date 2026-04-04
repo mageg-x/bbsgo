@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <FileText :size="18" />
-              {{ t('topic.title') }}
-            </h3>
             <span class="total-count">{{ t('topic.totalTopics').replace('%d', total) }}</span>
           </div>
           <div class="header-right">

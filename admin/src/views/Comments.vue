@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <MessageCircle :size="18" />
-              {{ t('comment.title') }}
-            </h3>
             <span class="total-count">{{ t('comment.totalComments').replace('%d', total) }}</span>
           </div>
           <div class="header-right">

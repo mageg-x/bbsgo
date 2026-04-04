@@ -158,23 +158,12 @@ func (s *ContentQualityService) hasRepeatingChars(content string) bool {
 }
 
 func (s *ContentQualityService) hasSpamKeywords(content string) bool {
-	spamKeywords := []string{
-		"加VX", "加微信", "加V", "加Q", "加QQ",
-		"赚钱", "日赚", "月入", "兼职赚钱",
-		"代刷", "代写", "代做",
-		"免费领取", "点击领取", "扫码领取",
-		"低价出售", "高价收购",
+	spamService := GetSpamKeywordService()
+	hasSpam, matchedKeywords := spamService.Check(content)
+	if hasSpam {
+		log.Printf("[quality-keyword] detected spam keywords: %v", matchedKeywords)
 	}
-
-	lowerContent := strings.ToLower(content)
-	for _, keyword := range spamKeywords {
-		if strings.Contains(lowerContent, strings.ToLower(keyword)) {
-			log.Printf("[quality-keyword] detected spam keyword: %s", keyword)
-			return true
-		}
-	}
-
-	return false
+	return hasSpam
 }
 
 func (s *ContentQualityService) countExternalLinks(content string) int {

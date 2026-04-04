@@ -201,7 +201,7 @@ func (s *BadgeService) SendBadgeNotification(userID uint, badgeID uint) {
 	notification := models.Notification{
 		UserID:      userID,
 		Type:        "badge",
-		Content:     "恭喜您获得勋章：" + badge.Name,
+		Content:     "notifications.badge_earned",
 		RelatedID:   badgeID,
 		RelatedType: "badge",
 		IsRead:      false,

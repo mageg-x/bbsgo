@@ -62,6 +62,7 @@ import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import api from '@/api'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
+import { getErrorI18nKey } from '@/utils/error'
 import FollowButton from '@/components/FollowButton.vue'
 
 const { t } = useI18n()
@@ -103,7 +104,7 @@ async function loadList() {
     total.value = res.total || list.value.length
   } catch (e) {
     console.error(t('follow.loadFailed'), e)
-    ElMessage.error(t('follow.loadFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   } finally {
     loading.value = false
   }

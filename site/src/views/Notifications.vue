@@ -18,12 +18,32 @@
               notif.type === 'like' ? 'bg-red-500' :
                 notif.type === 'comment' ? 'bg-blue-500' :
                   notif.type === 'follow' ? 'bg-green-500' :
-                    notif.type === 'badge' ? 'bg-yellow-500' : 'bg-gray-500']"></div>
+                    notif.type === 'badge' ? 'bg-yellow-500' :
+                      notif.type === 'message' ? 'bg-purple-500' :
+                        notif.type === 'best_comment' ? 'bg-orange-500' : 'bg-gray-500']"></div>
             <div v-if="notif.type === 'badge' && notif.badge" class="mr-2">
               <SvgBadge :type="notif.badge.icon" :size="24" :title="notif.badge.name" />
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-gray-900 text-sm">{{ notif.content }}</p>
+              <!-- 勋章通知 -->
+              <p v-if="notif.type === 'badge'" class="text-gray-900 text-sm">
+                {{ t('notifications.badgeEarned', { badgeName: notif.badge?.name || '' }) }}
+              </p>
+              <!-- 私信通知 -->
+              <p v-else-if="notif.type === 'message'" class="text-gray-900 text-sm">
+                {{ t('notifications.newMessage') }}
+                <span v-if="notif.from_user" class="text-blue-500">@{{ notif.from_user.username }}</span>
+              </p>
+              <!-- 关注通知 -->
+              <p v-else-if="notif.type === 'follow'" class="text-gray-900 text-sm">
+                {{ t('notifications.userFollowedYou', { username: notif.related_user?.username || '' }) }}
+              </p>
+              <!-- 最佳评论通知 -->
+              <p v-else-if="notif.type === 'best_comment'" class="text-gray-900 text-sm">
+                {{ t('notifications.commentBest') }}
+              </p>
+              <!-- 其他通知直接显示 content -->
+              <p v-else class="text-gray-900 text-sm">{{ notif.content }}</p>
               <span class="text-xs text-gray-400">{{ formatTime(notif.created_at) }}</span>
             </div>
             <span v-if="!notif.is_read" class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2"></span>
@@ -44,7 +64,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import api from '@/api'
+import { getErrorI18nKey } from '@/utils/error'
 import SvgBadge from '@/components/SvgBadge.vue'
 
 const { t } = useI18n()
@@ -60,10 +82,10 @@ function formatTime(date) {
   const diff = now - d
 
   if (diff < 60000) return t('notifications.justNow')
-  if (diff < 3600000) return t('notifications.minutesAgo', { 0: Math.floor(diff / 60000) })
-  if (diff < 86400000) return t('notifications.hoursAgo', { 0: Math.floor(diff / 3600000) })
-  if (diff < 604800000) return t('notifications.daysAgo', { 0: Math.floor(diff / 86400000) })
-  return d.toLocaleDateString('zh-CN')
+  if (diff < 3600000) return t('notifications.minutesAgo', { minutes: Math.floor(diff / 60000) })
+  if (diff < 86400000) return t('notifications.hoursAgo', { hours: Math.floor(diff / 3600000) })
+  if (diff < 604800000) return t('notifications.daysAgo', { days: Math.floor(diff / 86400000) })
+  return d.toLocaleDateString()
 }
 
 async function loadNotifications() {
@@ -75,6 +97,7 @@ async function loadNotifications() {
     total.value = res.total
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -87,8 +110,11 @@ async function markAllRead() {
   try {
     await api.put('/notifications/read-all')
     notifications.value.forEach(n => n.is_read = true)
+    ElMessage.success(t('notifications.markAllReadSuccess'))
+    // 通知 App.vue 更新未读数
+    window.dispatchEvent(new CustomEvent('notifications-read-all'))
   } catch (e) {
-    console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 

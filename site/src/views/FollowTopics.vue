@@ -38,6 +38,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import api from '@/api'
+import { getErrorI18nKey } from '@/utils/error'
 import TopicCard from '@/components/TopicCard.vue'
 
 const { t } = useI18n()
@@ -59,7 +60,7 @@ async function loadFollowTopics() {
     total.value = res.total || 0
   } catch (e) {
     console.error(t('followTopics.loadFailed'), e)
-    ElMessage.error(t('followTopics.loadFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   } finally {
     loading.value = false
   }

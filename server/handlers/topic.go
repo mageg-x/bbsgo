@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -223,7 +224,34 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	checkResult := antispamMiddleware.CheckTopicCreate(userID, req.Content)
 	if !checkResult.Allowed {
 		log.Printf("create topic: antispam check failed, userID: %d, reason: %s", userID, checkResult.Reason)
-		errors.Error(w, errors.CodeSensitiveContent, "")
+		// 根据具体原因返回对应错误码
+		reason := checkResult.Reason
+		switch {
+		case strings.Contains(reason, "禁言"):
+			errors.Error(w, errors.CodeUserBanned, reason)
+		case strings.Contains(reason, "操作过快"):
+			errors.Error(w, errors.CodeOperationTooFast, reason)
+		case strings.Contains(reason, "已达上限"):
+			errors.Error(w, errors.CodeDailyLimitExceeded, reason)
+		case strings.Contains(reason, "太短"):
+			errors.Error(w, errors.CodeContentTooShort, reason)
+		case strings.Contains(reason, "广告"):
+			errors.Error(w, errors.CodeSensitiveContent, reason)
+		case strings.Contains(reason, "敏感词"):
+			errors.Error(w, errors.CodeSensitiveContent, reason)
+		case strings.Contains(reason, "重复字符"):
+			errors.Error(w, errors.CodeRepeatingChars, reason)
+		case strings.Contains(reason, "无实质信息"):
+			errors.Error(w, errors.CodeNoSubstantiveContent, reason)
+		case strings.Contains(reason, "符号或表情"):
+			errors.Error(w, errors.CodeSymbolsOrEmojiOnly, reason)
+		case strings.Contains(reason, "过多外部链接"):
+			errors.Error(w, errors.CodeTooManyLinks, reason)
+		case strings.Contains(reason, "重复"):
+			errors.Error(w, errors.CodeSensitiveContent, reason)
+		default:
+			errors.Error(w, errors.CodeSensitiveContent, reason)
+		}
 		return
 	}
 

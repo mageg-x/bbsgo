@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <FolderOpen :size="18" />
-              {{ t('forum.title') }}
-            </h3>
             <span class="total-count">{{ t('forum.totalForums').replace('%d', forums.length) }}</span>
           </div>
           <el-button type="primary" @click="openCreateModal">

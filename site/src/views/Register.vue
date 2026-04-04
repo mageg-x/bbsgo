@@ -19,60 +19,44 @@
         <p class="text-gray-500 mt-1 text-sm">{{ t('register.subtitle') }}</p>
       </div>
 
-      <form @submit.prevent="handleRegister" class="space-y-4">
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-1">{{ t('register.username') }}</label>
-          <input type="text" v-model="form.username"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-            :placeholder="t('register.usernamePlaceholder')" required />
-        </div>
+      <el-form @submit.prevent="handleRegister" :model="form" :rules="rules" ref="formRef" label-position="top">
+        <el-form-item :label="t('register.username')" prop="username">
+          <el-input v-model="form.username" :placeholder="t('register.usernamePlaceholder')" />
+        </el-form-item>
 
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-1">{{ t('register.nickname') }}</label>
-          <input type="text" v-model="form.nickname"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-            :placeholder="t('register.nicknamePlaceholder')" required />
-        </div>
+        <el-form-item :label="t('register.nickname')" prop="nickname">
+          <el-input v-model="form.nickname" :placeholder="t('register.nicknamePlaceholder')" />
+        </el-form-item>
 
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-1">{{ t('register.email') }}</label>
-          <input type="email" v-model="form.email"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-            :placeholder="t('register.emailPlaceholder')" required />
-        </div>
+        <el-form-item :label="t('register.email')" prop="email">
+          <el-input v-model="form.email" type="email" :placeholder="t('register.emailPlaceholder')" />
+        </el-form-item>
 
-        <div v-if="emailEnabled">
-          <label class="block text-gray-700 text-sm font-medium mb-1">{{ t('register.emailCode') }}</label>
+        <el-form-item v-if="emailEnabled" :label="t('register.emailCode')" prop="code">
           <div class="flex gap-2">
-            <input type="text" v-model="form.code"
-              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-              :placeholder="t('register.codePlaceholder')" maxlength="6" required />
+            <el-input v-model="form.code" :placeholder="t('register.codePlaceholder')" maxlength="6" />
             <button type="button" @click="sendCode" :disabled="countdown > 0 || !form.email"
               class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm">
               {{ countdown > 0 ? `${countdown}s` : t('register.sendCode') }}
             </button>
           </div>
-        </div>
+        </el-form-item>
 
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-1">{{ t('register.password') }}</label>
-          <input type="password" v-model="form.password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-            :placeholder="t('register.passwordPlaceholder')" required />
-        </div>
+        <el-form-item :label="t('register.password')" prop="password">
+          <el-input v-model="form.password" type="password" :placeholder="t('register.passwordPlaceholder')" show-password />
+        </el-form-item>
 
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-1">{{ t('register.confirmPassword') }}</label>
-          <input type="password" v-model="form.confirm_password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
-            :placeholder="t('register.confirmPasswordPlaceholder')" required />
-        </div>
+        <el-form-item :label="t('register.confirmPassword')" prop="confirm_password">
+          <el-input v-model="form.confirm_password" type="password" :placeholder="t('register.confirmPasswordPlaceholder')" show-password />
+        </el-form-item>
 
-        <button type="submit" :disabled="loading"
-          class="w-full bg-blue-500 text-white py-2.5 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-          {{ loading ? t('register.registering') : t('register.registerBtn') }}
-        </button>
-      </form>
+        <el-form-item>
+          <button type="submit" :disabled="loading"
+            class="w-full bg-blue-500 text-white py-2.5 rounded-lg hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+            {{ loading ? t('register.registering') : t('register.registerBtn') }}
+          </button>
+        </el-form-item>
+      </el-form>
 
       <p class="text-center mt-4 text-gray-600 text-sm">
         {{ t('register.hasAccount') }}
@@ -95,6 +79,7 @@ const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const configStore = useConfigStore()
+const formRef = ref(null)
 
 const form = ref({
   username: '',
@@ -109,6 +94,30 @@ const loading = ref(false)
 const countdown = ref(0)
 const emailEnabled = ref(false)
 let timer = null
+
+// 自定义验证：确认密码
+const validateConfirmPassword = (rule, value, callback) => {
+  if (value !== form.value.password) {
+    callback(new Error(''))
+  } else {
+    callback()
+  }
+}
+
+const rules = {
+  username: [{ required: true, message: '', trigger: 'blur' }],
+  nickname: [{ required: true, message: '', trigger: 'blur' }],
+  email: [
+    { required: true, message: '', trigger: 'blur' },
+    { type: 'email', message: '', trigger: 'blur' }
+  ],
+  code: [{ required: emailEnabled.value, message: '', trigger: 'blur' }],
+  password: [{ required: true, message: '', trigger: 'blur' }],
+  confirm_password: [
+    { required: true, message: '', trigger: 'blur' },
+    { validator: validateConfirmPassword, message: '', trigger: 'blur' }
+  ]
+}
 
 async function checkEmailEnabled() {
   try {
@@ -162,11 +171,12 @@ async function handleRegister() {
 
   loading.value = true
   try {
+    await formRef.value.validate()
     await userStore.register(form.value)
     ElMessage.success(t('register.success'))
     router.push('/')
   } catch (e) {
-    // error shown in interceptor
+    // 验证失败或注册失败
   } finally {
     loading.value = false
   }

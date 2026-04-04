@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <AlertTriangle :size="18" />
-              {{ t('report.title') }}
-            </h3>
             <span v-if="pendingCount > 0" class="pending-badge">
               <Bell :size="12" />
               {{ t('report.pendingCount').replace('%d', pendingCount) }}

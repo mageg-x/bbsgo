@@ -214,6 +214,7 @@ import { useUserStore } from '@/stores/user'
 import { getUserAvatar, getUserDisplayName } from '@/utils/user'
 import { stripMarkdown, extractFirstImage, hasVideo } from '@/utils/markdown'
 import { getDisplayBadges } from '@/utils/badge'
+import { getErrorI18nKey } from '@/utils/error'
 import SvgBadge from '@/components/SvgBadge.vue'
 
 const { t } = useI18n()
@@ -271,6 +272,7 @@ async function loadTags() {
     tags.value = res || []
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -305,6 +307,7 @@ async function loadTopics(isLoadMore = false) {
     }
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   } finally {
     loading.value = false
   }
@@ -322,6 +325,7 @@ async function loadHotTopics() {
     hotTopics.value = res.list || []
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -331,6 +335,7 @@ async function loadCreditUsers() {
     creditUsers.value = res || []
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -340,6 +345,7 @@ async function loadAnnouncements() {
     announcements.value = res || []
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -387,7 +393,7 @@ async function toggleLike(topic) {
     topic.liked = !topic.liked
   } catch (e) {
     console.error(e)
-    ElMessage.error(t('common.operationFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -400,6 +406,7 @@ async function loadSignInStatus() {
     signInStatus.value.credits = res.credits || 0
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 
@@ -417,7 +424,7 @@ async function handleSignIn() {
     }
   } catch (e) {
     console.error(e)
-    ElMessage.error(e.response?.data?.message || t('checkin.signInFailed'))
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   } finally {
     signInLoading.value = false
   }
@@ -457,6 +464,7 @@ async function checkTopicLikes() {
     }
   } catch (e) {
     console.error(e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
   }
 }
 

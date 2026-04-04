@@ -1,6 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
+  <el-config-provider :locale="elementLocale">
+    <div class="min-h-screen bg-gray-100">
+      <nav class="bg-white shadow-sm sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div class="flex justify-between h-14 sm:h-16">
           <div class="flex items-center">
@@ -21,24 +22,24 @@
                 </svg>
               </button>
             </div>
+            <!-- 语言切换 - 所有人都能看到 -->
+            <el-dropdown @command="switchLanguage" trigger="click">
+              <span class="language-btn">
+                <Globe :size="16" />
+                <span>{{ locale === 'zh' ? '中文' : 'EN' }}</span>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item :command="'zh'" :class="{ 'is-active': locale === 'zh' }">
+                    中文
+                  </el-dropdown-item>
+                  <el-dropdown-item :command="'en'" :class="{ 'is-active': locale === 'en' }">
+                    English
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <template v-if="userStore.isLoggedIn">
-              <!-- 语言切换 -->
-              <el-dropdown @command="switchLanguage" trigger="click">
-                <span class="language-btn">
-                  <Globe :size="16" />
-                  <span>{{ locale === 'zh' ? '中文' : 'EN' }}</span>
-                </span>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item :command="'zh'" :class="{ 'is-active': locale === 'zh' }">
-                      中文
-                    </el-dropdown-item>
-                    <el-dropdown-item :command="'en'" :class="{ 'is-active': locale === 'en' }">
-                      English
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>              
               <router-link v-if="configStore.state.allow_post" to="/new-topic"
                 class="bg-blue-500 whitespace-nowrap text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-600">
                 {{ t('common.publish') }}
@@ -152,12 +153,16 @@
       <router-view />
     </main>
   </div>
+  </el-config-provider>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { ElConfigProvider } from 'element-plus'
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import en from 'element-plus/dist/locale/en.mjs'
 import { useUserStore } from '@/stores/user'
 import { useConfigStore } from '@/stores/config'
 import api from '@/api'
@@ -179,6 +184,11 @@ const siteConfig = ref({
 const showUserMenu = ref(false)
 const userMenuRef = ref(null)
 const unreadCount = ref(0)
+
+// Element Plus 语言映射
+const elementLocale = computed(() => {
+  return locale.value === 'en' ? en : zhCn
+})
 
 const currentForumId = computed(() => {
   const forumId = route.query.forum
@@ -310,12 +320,16 @@ onMounted(async () => {
   loadUnreadCount()
   document.addEventListener('click', handleClickOutside)
 
+  // 监听标记全部已读事件
+  window.addEventListener('notifications-read-all', loadUnreadCount)
+
   // 每30秒刷新一次未读数量
   setInterval(loadUnreadCount, 30000)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('notifications-read-all', loadUnreadCount)
 })
 </script>
 

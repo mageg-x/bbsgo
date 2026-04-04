@@ -220,37 +220,37 @@ func RegisterAntiSpamRoutes(r *mux.Router) {
 	log.Printf("[antispam] registering routes")
 	middleware := NewAntiSpamMiddleware()
 
-	r.HandleFunc("/api/v1/antispam/check/topic", func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
+	r.HandleFunc("/api/v1/antispam/check/topic", func(w http.ResponseWriter, req *http.Request) {
+		var reqBody struct {
 			UserID  uint   `json:"user_id"`
 			Content string `json:"content"`
 		}
 
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 			log.Printf("[antispam] parse topic check request failed: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		log.Printf("[antispam] topic check request, userID: %d", req.UserID)
-		result := middleware.CheckTopicCreate(req.UserID, req.Content)
+		log.Printf("[antispam] topic check request, userID: %d", reqBody.UserID)
+		result := middleware.CheckTopicCreate(reqBody.UserID, reqBody.Content)
 		json.NewEncoder(w).Encode(result)
 	}).Methods("POST")
 
-	r.HandleFunc("/api/v1/antispam/check/comment", func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
+	r.HandleFunc("/api/v1/antispam/check/comment", func(w http.ResponseWriter, req *http.Request) {
+		var reqBody struct {
 			UserID  uint   `json:"user_id"`
 			Content string `json:"content"`
 		}
 
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 			log.Printf("[antispam] parse comment check request failed: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		log.Printf("[antispam] comment check request, userID: %d", req.UserID)
-		result := middleware.CheckCommentCreate(req.UserID, req.Content)
+		log.Printf("[antispam] comment check request, userID: %d", reqBody.UserID)
+		result := middleware.CheckCommentCreate(reqBody.UserID, reqBody.Content)
 		json.NewEncoder(w).Encode(result)
 	}).Methods("POST")
 

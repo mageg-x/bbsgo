@@ -4,10 +4,6 @@
       <template #header>
         <div class="card-header">
           <div class="header-left">
-            <h3>
-              <Award :size="18" />
-              {{ t('badge.title') }}
-            </h3>
             <span class="total-count">{{ t('badge.totalBadges').replace('%d', badges.length) }}</span>
           </div>
           <div class="header-right">
@@ -271,11 +267,13 @@ onMounted(() => {
 
 <style scoped>
 .badges-page {
-  padding: 20px;
+  max-width: 1400px;
 }
 
 .main-card {
-  border-radius: 8px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .card-header {

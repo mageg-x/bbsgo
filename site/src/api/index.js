@@ -1,5 +1,13 @@
 import axios from "axios";
-import { ElMessage } from 'element-plus';
+
+// 自定义 API 错误类，包含错误码
+export class ApiError extends Error {
+  constructor(code, message) {
+    super(message)
+    this.code = code
+    this.name = 'ApiError'
+  }
+}
 
 const api = axios.create({
   baseURL: "/api/v1",
@@ -23,11 +31,8 @@ api.interceptors.response.use(
     if (res.code === 0) {
       return res.data;
     } else {
-      // 404 等情况不弹错误提示，由组件自行处理
-      if (res.code !== 404) {
-        ElMessage.error(res.message || "请求失败")
-      }
-      return Promise.reject(new Error(res.message));
+      // 不弹错误提示，由组件自行处理
+      return Promise.reject(new ApiError(res.code, res.message));
     }
   },
   (error) => {
