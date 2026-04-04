@@ -35,9 +35,6 @@ func main() {
 	// /console/ 下的所有路径都由 admin 的 SPA 处理
 	consoleRouter.PathPrefix("/").Handler(http.HandlerFunc(fileserver.ServeAdmin))
 
-	// 主站 - 所有其他路径（SPA）
-	r.PathPrefix("/").Handler(http.HandlerFunc(fileserver.ServeSite))
-
 	// 上传文件 - 优先处理
 	r.HandleFunc("/uploads/{file:.*}", func(w http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
@@ -46,6 +43,9 @@ func main() {
 		log.Printf("[static] serving file: %s", fullPath)
 		http.ServeFile(w, req, fullPath)
 	})
+
+	// 主站 - 所有其他路径（SPA）
+	r.PathPrefix("/").Handler(http.HandlerFunc(fileserver.ServeSite))
 
 	log.Printf("server starting on :8080...")
 	if err := http.ListenAndServe(":8080", r); err != nil {
