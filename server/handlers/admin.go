@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/utils"
@@ -42,11 +43,11 @@ func GetAdminUsers(w http.ResponseWriter, r *http.Request) {
 	// 查询用户列表
 	if err := database.DB.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
 		log.Printf("get admin users: failed to query users, error: %v", err)
-		utils.Error(w, 500, "获取用户列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      users,
 		"total":     total,
 		"page":      page,
@@ -66,14 +67,14 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("update user role: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证角色值
 	if req.Role < 0 || req.Role > 2 {
 		log.Printf("update user role: invalid role value, id: %d, role: %d", id, req.Role)
-		utils.Error(w, 400, "无效的角色")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -81,7 +82,7 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, id).Error; err != nil {
 		log.Printf("update user role: user not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
@@ -91,19 +92,19 @@ func UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	// 不能修改自己的角色
 	if uint(id) == userID {
 		log.Printf("update user role: cannot modify own role, id: %d, userID: %d", id, userID)
-		utils.Error(w, 400, "不能修改自己的角色")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
 	// 更新角色
 	if err := database.DB.Model(&user).Update("role", req.Role).Error; err != nil {
 		log.Printf("update user role: failed to update role, id: %d, role: %d, error: %v", id, req.Role, err)
-		utils.Error(w, 500, "更新角色失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("update user role: role updated successfully, id: %d, newRole: %d", id, req.Role)
-	utils.Success(w, user)
+	errors.Success(w, user)
 }
 
 // BanUser 封禁/解封用户处理器（管理员）
@@ -115,7 +116,7 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, id).Error; err != nil {
 		log.Printf("ban user: user not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
@@ -125,7 +126,7 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 	// 不能封禁自己
 	if uint(id) == userID {
 		log.Printf("ban user: cannot ban yourself, id: %d, userID: %d", id, userID)
-		utils.Error(w, 400, "不能封禁自己")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -135,19 +136,19 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("ban user: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 更新封禁状态
 	if err := database.DB.Model(&user).Update("is_banned", req.Banned).Error; err != nil {
 		log.Printf("ban user: failed to update banned status, id: %d, banned: %v, error: %v", id, req.Banned, err)
-		utils.Error(w, 500, "操作失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("ban user: user banned status updated, id: %d, banned: %v", id, req.Banned)
-	utils.Success(w, user)
+	errors.Success(w, user)
 }
 
 // DeleteUser 删除用户处理器（管理员）
@@ -160,14 +161,14 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	adminID, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete user: unauthorized access, id: %d", id)
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
 	// 不能删除自己
 	if uint(id) == adminID {
 		log.Printf("delete user: cannot delete yourself, id: %d, adminID: %d", id, adminID)
-		utils.Error(w, 400, "不能删除自己")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -175,7 +176,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, id).Error; err != nil {
 		log.Printf("delete user: user not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
@@ -183,7 +184,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	tx := database.DB.Begin()
 	if tx.Error != nil {
 		log.Printf("delete user: failed to begin transaction, error: %v", tx.Error)
-		utils.Error(w, 500, "操作失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -191,7 +192,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Unscoped().Where("user_id = ?", id).Delete(&models.Comment{}).Error; err != nil {
 		tx.Rollback()
 		log.Printf("delete user: failed to delete user comments, userId: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除用户评论失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -199,7 +200,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Unscoped().Where("user_id = ?", id).Delete(&models.Favorite{}).Error; err != nil {
 		tx.Rollback()
 		log.Printf("delete user: failed to delete user favorites, userId: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除用户收藏失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -207,7 +208,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Unscoped().Where("user_id = ?", id).Delete(&models.Like{}).Error; err != nil {
 		tx.Rollback()
 		log.Printf("delete user: failed to delete user likes, userId: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除用户点赞失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -215,7 +216,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Unscoped().Where("user_id = ?", id).Delete(&models.Notification{}).Error; err != nil {
 		tx.Rollback()
 		log.Printf("delete user: failed to delete user notifications, userId: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除用户通知失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -223,7 +224,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Unscoped().Where("from_user_id = ? OR to_user_id = ?", id, id).Delete(&models.Message{}).Error; err != nil {
 		tx.Rollback()
 		log.Printf("delete user: failed to delete user messages, userId: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除用户消息失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -231,14 +232,14 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Unscoped().Delete(&user).Error; err != nil {
 		tx.Rollback()
 		log.Printf("delete user: failed to delete user, userId: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除用户失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	// 提交事务
 	tx.Commit()
 	log.Printf("delete user: user deleted successfully, userId: %d, username: %s", id, user.Username)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // ========== 版块管理 ==========
@@ -249,26 +250,26 @@ func CreateForum(w http.ResponseWriter, r *http.Request) {
 	var forum models.Forum
 	if err := json.NewDecoder(r.Body).Decode(&forum); err != nil {
 		log.Printf("create forum: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证版块名称
 	if forum.Name == "" {
 		log.Printf("create forum: forum name is empty")
-		utils.Error(w, 400, "请填写版块名称")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
 	// 创建版块
 	if err := database.DB.Create(&forum).Error; err != nil {
 		log.Printf("create forum: failed to create forum, name: %s, error: %v", forum.Name, err)
-		utils.Error(w, 500, "创建失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("create forum: forum created successfully, id: %d, name: %s", forum.ID, forum.Name)
-	utils.Success(w, forum)
+	errors.Success(w, forum)
 }
 
 // UpdateForum 更新版块处理器（管理员）
@@ -280,7 +281,7 @@ func UpdateForum(w http.ResponseWriter, r *http.Request) {
 	var forum models.Forum
 	if err := database.DB.First(&forum, id).Error; err != nil {
 		log.Printf("update forum: forum not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "版块不存在")
+		errors.Error(w, errors.CodeForumNotFound, "")
 		return
 	}
 
@@ -288,7 +289,7 @@ func UpdateForum(w http.ResponseWriter, r *http.Request) {
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		log.Printf("update forum: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -299,12 +300,12 @@ func UpdateForum(w http.ResponseWriter, r *http.Request) {
 	// 执行更新
 	if err := database.DB.Model(&forum).Updates(updates).Error; err != nil {
 		log.Printf("update forum: failed to update forum, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "更新失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("update forum: forum updated successfully, id: %d", id)
-	utils.Success(w, forum)
+	errors.Success(w, forum)
 }
 
 // DeleteForum 删除版块处理器（管理员）
@@ -316,19 +317,19 @@ func DeleteForum(w http.ResponseWriter, r *http.Request) {
 	var forum models.Forum
 	if err := database.DB.First(&forum, id).Error; err != nil {
 		log.Printf("delete forum: forum not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "版块不存在")
+		errors.Error(w, errors.CodeForumNotFound, "")
 		return
 	}
 
 	// 物理删除版块
 	if err := database.DB.Unscoped().Delete(&forum).Error; err != nil {
 		log.Printf("delete forum: failed to delete forum, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete forum: forum deleted successfully, id: %d", id)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // ========== 话题管理 ==========
@@ -358,11 +359,11 @@ func GetAdminTopics(w http.ResponseWriter, r *http.Request) {
 	// 查询话题列表
 	if err := database.DB.Offset(offset).Limit(pageSize).Preload("User").Preload("Forum").Find(&topics).Error; err != nil {
 		log.Printf("get admin topics: failed to query topics, error: %v", err)
-		utils.Error(w, 500, "获取话题列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      topics,
 		"total":     total,
 		"page":      page,
@@ -379,19 +380,19 @@ func DeleteAdminTopic(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, id).Error; err != nil {
 		log.Printf("delete admin topic: topic not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 物理删除话题
 	if err := database.DB.Unscoped().Delete(&topic).Error; err != nil {
 		log.Printf("delete admin topic: failed to delete topic, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete admin topic: topic deleted successfully, id: %d", id)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // ========== 评论管理 ==========
@@ -421,11 +422,11 @@ func GetAdminComments(w http.ResponseWriter, r *http.Request) {
 	// 查询评论列表
 	if err := database.DB.Offset(offset).Limit(pageSize).Preload("User").Find(&comments).Error; err != nil {
 		log.Printf("get admin comments: failed to query comments, error: %v", err)
-		utils.Error(w, 500, "获取评论列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      comments,
 		"total":     total,
 		"page":      page,
@@ -442,19 +443,19 @@ func DeleteAdminComment(w http.ResponseWriter, r *http.Request) {
 	var comment models.Comment
 	if err := database.DB.First(&comment, id).Error; err != nil {
 		log.Printf("delete admin comment: comment not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "评论不存在")
+		errors.Error(w, errors.CodeCommentNotFound, "")
 		return
 	}
 
 	// 物理删除评论
 	if err := database.DB.Unscoped().Delete(&comment).Error; err != nil {
 		log.Printf("delete admin comment: failed to delete comment, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete admin comment: comment deleted successfully, id: %d", id)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // ========== 举报管理 ==========
@@ -484,7 +485,7 @@ func GetAdminReports(w http.ResponseWriter, r *http.Request) {
 	// 查询举报列表
 	if err := database.DB.Offset(offset).Limit(pageSize).Preload("Reporter").Find(&reports).Error; err != nil {
 		log.Printf("get admin reports: failed to query reports, error: %v", err)
-		utils.Error(w, 500, "获取举报列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -526,7 +527,7 @@ func GetAdminReports(w http.ResponseWriter, r *http.Request) {
 		reportsResponse[i] = reportMap
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      reportsResponse,
 		"total":     total,
 		"page":      page,
@@ -543,7 +544,7 @@ func HandleReport(w http.ResponseWriter, r *http.Request) {
 	var report models.Report
 	if err := database.DB.First(&report, id).Error; err != nil {
 		log.Printf("handle report: report not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "举报不存在")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -553,7 +554,7 @@ func HandleReport(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("handle report: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -568,13 +569,13 @@ func HandleReport(w http.ResponseWriter, r *http.Request) {
 			// 删除评论关联的点赞（硬删除）
 			if err := database.DB.Unscoped().Where("target_type = ? AND target_id = ?", "comment", report.TargetID).Delete(&models.Like{}).Error; err != nil {
 				log.Printf("handle report: failed to delete comment likes, commentID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除评论点赞失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			// 删除评论（硬删除）
 			if err := database.DB.Unscoped().Delete(&models.Comment{}, report.TargetID).Error; err != nil {
 				log.Printf("handle report: failed to delete comment, targetID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除评论失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			log.Printf("handle report: comment and likes deleted, commentID: %d", report.TargetID)
@@ -582,23 +583,23 @@ func HandleReport(w http.ResponseWriter, r *http.Request) {
 			// 删除帖子前先删除关联的评论、收藏和点赞（硬删除）
 			if err := database.DB.Unscoped().Where("topic_id = ?", report.TargetID).Delete(&models.Comment{}).Error; err != nil {
 				log.Printf("handle report: failed to delete topic comments, topicID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除帖子评论失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			if err := database.DB.Unscoped().Where("topic_id = ?", report.TargetID).Delete(&models.Favorite{}).Error; err != nil {
 				log.Printf("handle report: failed to delete topic favorites, topicID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除帖子收藏记录失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			if err := database.DB.Unscoped().Where("target_type = ? AND target_id = ?", "topic", report.TargetID).Delete(&models.Like{}).Error; err != nil {
 				log.Printf("handle report: failed to delete topic likes, topicID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除帖子点赞失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			// 删除帖子（硬删除）
 			if err := database.DB.Unscoped().Delete(&models.Topic{}, report.TargetID).Error; err != nil {
 				log.Printf("handle report: failed to delete topic, targetID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除帖子失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			log.Printf("handle report: topic, comments, favorites and likes deleted, topicID: %d", report.TargetID)
@@ -606,7 +607,7 @@ func HandleReport(w http.ResponseWriter, r *http.Request) {
 			// 删除用户（硬删除）
 			if err := database.DB.Unscoped().Delete(&models.User{}, report.TargetID).Error; err != nil {
 				log.Printf("handle report: failed to delete user, targetID: %d, error: %v", report.TargetID, err)
-				utils.Error(w, 500, "删除用户失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			log.Printf("handle report: user deleted, targetID: %d", report.TargetID)
@@ -621,12 +622,12 @@ func HandleReport(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := database.DB.Model(&report).Updates(updates).Error; err != nil {
 		log.Printf("handle report: failed to update report, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "处理举报失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("handle report: report handled successfully, id: %d, status: %d", id, req.Status)
-	utils.Success(w, report)
+	errors.Success(w, report)
 }
 
 // ========== 公告管理 ==========
@@ -637,26 +638,26 @@ func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var announcement models.Announcement
 	if err := json.NewDecoder(r.Body).Decode(&announcement); err != nil {
 		log.Printf("create announcement: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证必填字段
 	if announcement.Title == "" || announcement.Content == "" {
 		log.Printf("create announcement: incomplete announcement info, title: %s", announcement.Title)
-		utils.Error(w, 400, "请填写完整信息")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
 	// 创建公告
 	if err := database.DB.Create(&announcement).Error; err != nil {
 		log.Printf("create announcement: failed to create announcement, title: %s, error: %v", announcement.Title, err)
-		utils.Error(w, 500, "创建失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("create announcement: announcement created successfully, id: %d, title: %s", announcement.ID, announcement.Title)
-	utils.Success(w, announcement)
+	errors.Success(w, announcement)
 }
 
 // UpdateAnnouncement 更新公告处理器（管理员）
@@ -668,7 +669,7 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var announcement models.Announcement
 	if err := database.DB.First(&announcement, id).Error; err != nil {
 		log.Printf("update announcement: announcement not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "公告不存在")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -676,19 +677,19 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		log.Printf("update announcement: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 执行更新
 	if err := database.DB.Model(&announcement).Updates(updates).Error; err != nil {
 		log.Printf("update announcement: failed to update announcement, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "更新失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("update announcement: announcement updated successfully, id: %d", id)
-	utils.Success(w, announcement)
+	errors.Success(w, announcement)
 }
 
 // DeleteAnnouncement 删除公告处理器（管理员）
@@ -700,19 +701,19 @@ func DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var announcement models.Announcement
 	if err := database.DB.First(&announcement, id).Error; err != nil {
 		log.Printf("delete announcement: announcement not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "公告不存在")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	// 物理删除公告
 	if err := database.DB.Unscoped().Delete(&announcement).Error; err != nil {
 		log.Printf("delete announcement: failed to delete announcement, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete announcement: announcement deleted successfully, id: %d", id)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // ========== 标签管理 ==========
@@ -723,18 +724,18 @@ func GetAdminTags(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("get admin tags: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
 	var tags []models.Tag
 	if err := database.DB.Order("usage_count DESC, sort_order ASC").Find(&tags).Error; err != nil {
 		log.Printf("get admin tags: failed to query tags, error: %v", err)
-		utils.Error(w, 500, "获取标签列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, tags)
+	errors.Success(w, tags)
 }
 
 // CreateTag 创建标签处理器（管理员）
@@ -743,7 +744,7 @@ func CreateTag(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("create tag: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -755,14 +756,14 @@ func CreateTag(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create tag: failed to decode request body, error: %v", err)
-		utils.Error(w, http.StatusBadRequest, "无效的请求数据")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证标签名称
 	if req.Name == "" {
 		log.Printf("create tag: tag name is empty")
-		utils.Error(w, http.StatusBadRequest, "标签名称不能为空")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
@@ -774,12 +775,12 @@ func CreateTag(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := database.DB.Create(&tag).Error; err != nil {
 		log.Printf("create tag: failed to create tag, name: %s, error: %v", req.Name, err)
-		utils.Error(w, 500, "创建标签失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("create tag: tag created successfully, id: %d, name: %s", tag.ID, req.Name)
-	utils.Success(w, tag)
+	errors.Success(w, tag)
 }
 
 // UpdateTag 更新标签处理器（管理员）
@@ -788,7 +789,7 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("update tag: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -805,7 +806,7 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("update tag: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, http.StatusBadRequest, "无效的请求数据")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -813,7 +814,7 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 	var tag models.Tag
 	if result := database.DB.First(&tag, id); result.Error != nil {
 		log.Printf("update tag: tag not found, id: %d, error: %v", id, result.Error)
-		utils.Error(w, http.StatusNotFound, "标签不存在")
+		errors.Error(w, errors.CodeTagNotFound, "")
 		return
 	}
 
@@ -827,12 +828,12 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 	// 保存更新
 	if err := database.DB.Save(&tag).Error; err != nil {
 		log.Printf("update tag: failed to update tag, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "更新标签失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("update tag: tag updated successfully, id: %d, name: %s", id, req.Name)
-	utils.Success(w, tag)
+	errors.Success(w, tag)
 }
 
 // DeleteTag 删除标签处理器（管理员）
@@ -841,7 +842,7 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete tag: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -851,12 +852,12 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 	// 物理删除标签
 	if err := database.DB.Unscoped().Delete(&models.Tag{}, id).Error; err != nil {
 		log.Printf("delete tag: failed to delete tag, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除标签失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete tag: tag deleted successfully, id: %d", id)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // MergeTags 合并标签处理器（管理员）
@@ -866,7 +867,7 @@ func MergeTags(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("merge tags: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -877,14 +878,14 @@ func MergeTags(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("merge tags: failed to decode request body, error: %v", err)
-		utils.Error(w, http.StatusBadRequest, "无效的请求数据")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证参数
 	if req.SourceID == 0 || req.TargetID == 0 || req.SourceID == req.TargetID {
 		log.Printf("merge tags: invalid tag ids, sourceID: %d, targetID: %d", req.SourceID, req.TargetID)
-		utils.Error(w, http.StatusBadRequest, "无效的标签ID")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -892,12 +893,12 @@ func MergeTags(w http.ResponseWriter, r *http.Request) {
 	var sourceTag, targetTag models.Tag
 	if err := database.DB.First(&sourceTag, req.SourceID).Error; err != nil {
 		log.Printf("merge tags: source tag not found, sourceID: %d, error: %v", req.SourceID, err)
-		utils.Error(w, http.StatusNotFound, "源标签不存在")
+		errors.Error(w, errors.CodeTagNotFound, "")
 		return
 	}
 	if err := database.DB.First(&targetTag, req.TargetID).Error; err != nil {
 		log.Printf("merge tags: target tag not found, targetID: %d, error: %v", req.TargetID, err)
-		utils.Error(w, http.StatusNotFound, "目标标签不存在")
+		errors.Error(w, errors.CodeTagNotFound, "")
 		return
 	}
 
@@ -928,7 +929,7 @@ func MergeTags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("merge tags: tags merged successfully, sourceID: %d, targetID: %d, mergedCount: %d", req.SourceID, req.TargetID, len(topics))
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"merged_count": len(topics),
 		"target_tag":   targetTag,
 	})
@@ -942,7 +943,7 @@ func ChangeAdminPassword(w http.ResponseWriter, r *http.Request) {
 	adminID, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("change admin password: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -953,21 +954,21 @@ func ChangeAdminPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("change admin password: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证必填字段
 	if req.OldPassword == "" || req.NewPassword == "" {
 		log.Printf("change admin password: incomplete password info")
-		utils.Error(w, 400, "请填写完整信息")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
 	// 验证新密码长度
 	if len(req.NewPassword) < 6 {
 		log.Printf("change admin password: new password too short, length: %d", len(req.NewPassword))
-		utils.Error(w, 400, "新密码长度至少为6位")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -975,14 +976,14 @@ func ChangeAdminPassword(w http.ResponseWriter, r *http.Request) {
 	var admin models.User
 	if err := database.DB.First(&admin, adminID).Error; err != nil {
 		log.Printf("change admin password: admin not found, id: %d, error: %v", adminID, err)
-		utils.Error(w, 404, "管理员不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
 	// 验证原密码
 	if !utils.CheckPassword(req.OldPassword, admin.PasswordHash) {
 		log.Printf("change admin password: old password mismatch, adminID: %d", adminID)
-		utils.Error(w, 400, "原密码错误")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -990,17 +991,17 @@ func ChangeAdminPassword(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, err := utils.HashPassword(req.NewPassword)
 	if err != nil {
 		log.Printf("change admin password: failed to hash new password, error: %v", err)
-		utils.Error(w, 500, "密码加密失败")
+		errors.Error(w, errors.CodePasswordHashFailed, "")
 		return
 	}
 
 	// 更新密码
 	if err := database.DB.Model(&admin).Update("password_hash", hashedPassword).Error; err != nil {
 		log.Printf("change admin password: failed to update password, adminID: %d, error: %v", adminID, err)
-		utils.Error(w, 500, "更新密码失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("change admin password: password changed successfully, adminID: %d", adminID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }

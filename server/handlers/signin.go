@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/utils"
@@ -19,7 +20,7 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("sign in: user not found, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
@@ -27,7 +28,7 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 	today := time.Now().Format("2006-01-02")
 	if user.LastSignAt != nil && user.LastSignAt.Format("2006-01-02") == today {
 		log.Printf("sign in: already signed in today, userID: %d", userID)
-		utils.Error(w, 400, "今日已签到")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -51,12 +52,12 @@ func SignIn(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Save(&user).Error; err != nil {
 		log.Printf("sign in: failed to update user, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "签到失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("sign in: signed in successfully, userID: %d, credits: %d", userID, credits)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"credits":       credits,
 		"total_credits": user.Credits,
 		"message":       "签到成功",
@@ -71,14 +72,14 @@ func GetSignInStatus(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("get sign in status: user not found, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
 	today := time.Now().Format("2006-01-02")
 	signedToday := user.LastSignAt != nil && user.LastSignAt.Format("2006-01-02") == today
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"signed_today": signedToday,
 		"last_sign_at": user.LastSignAt,
 		"credits":      user.Credits,

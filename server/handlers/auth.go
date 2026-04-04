@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
 	"bbsgo/utils"
 	"encoding/json"
@@ -28,7 +29,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	// 检查是否允许注册
 	if !utils.GetConfigBool("allow_register", true) {
 		log.Printf("register: registration disabled")
-		utils.Error(w, 400, "注册功能已关闭")
+		errors.Error(w, errors.CodeRegisterDisabled, "")
 		return
 	}
 
@@ -36,14 +37,14 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("register: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证必填字段
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		log.Printf("register: incomplete registration info, username: %s, email: %s", req.Username, req.Email)
-		utils.Error(w, 400, "请填写完整信息")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
@@ -51,14 +52,14 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	var existingUser models.User
 	if err := database.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
 		log.Printf("register: username already exists, username: %s", req.Username)
-		utils.Error(w, 400, "用户名已存在")
+		errors.Error(w, errors.CodeUsernameExists, "")
 		return
 	}
 
 	// 检查邮箱是否已被注册
 	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		log.Printf("register: email already registered, email: %s", req.Email)
-		utils.Error(w, 400, "邮箱已被注册")
+		errors.Error(w, errors.CodeEmailExists, "")
 		return
 	}
 
@@ -66,7 +67,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		log.Printf("register: failed to hash password, error: %v", err)
-		utils.Error(w, 500, "密码加密失败")
+		errors.Error(w, errors.CodePasswordHashFailed, "")
 		return
 	}
 
@@ -82,7 +83,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&user).Error; err != nil {
 		log.Printf("register: failed to create user, username: %s, email: %s, error: %v", req.Username, req.Email, err)
-		utils.Error(w, 500, "注册失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -90,12 +91,12 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	token, err := utils.GenerateToken(user.ID, user.Username)
 	if err != nil {
 		log.Printf("register: failed to generate token, userID: %d, error: %v", user.ID, err)
-		utils.Error(w, 500, "生成令牌失败")
+		errors.Error(w, errors.CodeTokenGenerateFailed, "")
 		return
 	}
 
-	log.Printf("register: user registered successfully, userID: %d, username: %s", user.ID, user.Username)
-	utils.Success(w, map[string]interface{}{
+	log.Printf("register: user registered successfully, userID: %d, username: %s", user.ID, req.Username)
+	errors.Success(w, map[string]interface{}{
 		"token": token,
 		"user":  user,
 	})
@@ -108,7 +109,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("login: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -116,14 +117,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		log.Printf("login: user not found, username: %s", req.Username)
-		utils.Error(w, 400, "用户名或密码错误")
+		errors.Error(w, errors.CodeUsernameOrPassword, "")
 		return
 	}
 
 	// 验证密码
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
 		log.Printf("login: password mismatch, username: %s", req.Username)
-		utils.Error(w, 400, "用户名或密码错误")
+		errors.Error(w, errors.CodeUsernameOrPassword, "")
 		return
 	}
 
@@ -131,12 +132,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	token, err := utils.GenerateToken(user.ID, user.Username)
 	if err != nil {
 		log.Printf("login: failed to generate token, userID: %d, error: %v", user.ID, err)
-		utils.Error(w, 500, "生成令牌失败")
+		errors.Error(w, errors.CodeTokenGenerateFailed, "")
 		return
 	}
 
-	log.Printf("login: user logged in successfully, userID: %d, username: %s", user.ID, user.Username)
-	utils.Success(w, map[string]interface{}{
+	log.Printf("login: user logged in successfully, userID: %d, username: %s", user.ID, req.Username)
+	errors.Success(w, map[string]interface{}{
 		"token": token,
 		"user":  user,
 	})

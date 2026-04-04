@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"bbsgo/errors"
 	"bbsgo/storage"
-	"bbsgo/utils"
 	"io"
 	"log"
 	"net/http"
@@ -16,11 +16,11 @@ func CheckFileExists(w http.ResponseWriter, r *http.Request) {
 	filename := r.URL.Query().Get("filename")
 	contentHash := r.URL.Query().Get("content_hash") // 文件内容MD5
 	if filename == "" {
-		utils.Error(w, 400, "缺少文件名")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 	if contentHash == "" {
-		utils.Error(w, 400, "缺少文件内容hash")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -28,7 +28,7 @@ func CheckFileExists(w http.ResponseWriter, r *http.Request) {
 	storageSvc, err := storage.GetStorage()
 	if err != nil {
 		log.Printf("[upload/exists] failed to get storage service, error: %v", err)
-		utils.Error(w, 500, "存储服务不可用")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -51,7 +51,7 @@ func CheckFileExists(w http.ResponseWriter, r *http.Request) {
 	if storageSvc.Exists(key) {
 		url := storageSvc.GetURL(key)
 		log.Printf("[upload/exists] file exists, key: %s, url: %s", key, url)
-		utils.Success(w, map[string]interface{}{
+		errors.Success(w, map[string]interface{}{
 			"exists": true,
 			"url":    url,
 			"key":    key,
@@ -60,7 +60,7 @@ func CheckFileExists(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("[upload/exists] file not exists, key: %s", key)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"exists": false,
 		"key":    key,
 	})
@@ -75,7 +75,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	// 解析 multipart 表单，最大500MB
 	if err := r.ParseMultipartForm(500 << 20); err != nil {
 		log.Printf("[upload] failed to parse multipart form, error: %v", err)
-		utils.Error(w, 400, "文件大小超过限制")
+		errors.Error(w, errors.CodeFileSizeExceeded, "")
 		return
 	}
 
@@ -83,7 +83,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		log.Printf("[upload] failed to get form file, error: %v", err)
-		utils.Error(w, 400, "获取文件失败")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 	defer file.Close()
@@ -92,7 +92,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 
 	// 获取文件扩展名并验证
 	ext := strings.ToLower(filepath.Ext(header.Filename))
-	
+
 	// 支持的文件格式
 	imageExts := map[string]bool{
 		".jpg":  true,
@@ -103,7 +103,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 		".svg":  true,
 		".bmp":  true,
 	}
-	
+
 	videoExts := map[string]bool{
 		".mp4":  true,
 		".webm": true,
@@ -116,23 +116,23 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	// 验证文件类型
 	isImage := imageExts[ext]
 	isVideo := videoExts[ext]
-	
+
 	if !isImage && !isVideo {
 		log.Printf("[upload] unsupported file type: %s", ext)
-		utils.Error(w, 400, "不支持的文件类型")
+		errors.Error(w, errors.CodeFileTypeUnsupported, "")
 		return
 	}
 
 	// 验证文件大小（图片50MB，视频500MB）
 	if isImage && header.Size > 50*1024*1024 {
 		log.Printf("[upload] image too large: %d bytes", header.Size)
-		utils.Error(w, 400, "图片大小超过限制(最大50MB)")
+		errors.Error(w, errors.CodeImageSizeExceeded, "")
 		return
 	}
-	
+
 	if isVideo && header.Size > 500*1024*1024 {
 		log.Printf("[upload] video too large: %d bytes", header.Size)
-		utils.Error(w, 400, "视频大小超过限制(最大500MB)")
+		errors.Error(w, errors.CodeFileSizeExceeded, "")
 		return
 	}
 
@@ -140,7 +140,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	fileData, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("[upload] failed to read file data, error: %v", err)
-		utils.Error(w, 500, "读取文件失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 	log.Printf("[upload] file read success, size: %d bytes", len(fileData))
@@ -149,7 +149,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	storageSvc, err := storage.GetStorage()
 	if err != nil {
 		log.Printf("[upload] failed to get storage service, error: %v", err)
-		utils.Error(w, 500, "存储服务不可用")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -192,14 +192,14 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	url, err := storageSvc.Upload(key, fileData, contentType)
 	if err != nil {
 		log.Printf("[upload] failed to upload to storage, error: %v", err)
-		utils.Error(w, 500, "文件上传失败")
+		errors.Error(w, errors.CodeUploadFailed, "")
 		return
 	}
 
 	log.Printf("[upload] upload success, url: %s", url)
 	log.Printf("[upload] upload handler finished")
 
-	utils.Success(w, map[string]string{
+	errors.Success(w, map[string]string{
 		"url": url,
 	})
 }

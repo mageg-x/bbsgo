@@ -3,8 +3,8 @@ package handlers
 import (
 	"bbsgo/cache"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -21,7 +21,7 @@ import (
 func GetTags(w http.ResponseWriter, r *http.Request) {
 	// 尝试从缓存获取
 	if cached, ok := cache.Get("tags:hot"); ok {
-		utils.Success(w, cached)
+		errors.Success(w, cached)
 		return
 	}
 
@@ -32,14 +32,14 @@ func GetTags(w http.ResponseWriter, r *http.Request) {
 		Limit(20).
 		Find(&tags).Error; err != nil {
 		log.Printf("get tags: failed to query tags, error: %v", err)
-		utils.Error(w, 500, "获取标签失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	// 设置缓存
 	cache.Set("tags:hot", tags, 10*time.Minute)
 
-	utils.Success(w, tags)
+	errors.Success(w, tags)
 }
 
 // GetTag 获取单个标签详情处理器
@@ -50,11 +50,11 @@ func GetTag(w http.ResponseWriter, r *http.Request) {
 	var tag models.Tag
 	if err := database.DB.First(&tag, id).Error; err != nil {
 		log.Printf("get tag: tag not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "标签不存在")
+		errors.Error(w, errors.CodeTagNotFound, "")
 		return
 	}
 
-	utils.Success(w, tag)
+	errors.Success(w, tag)
 }
 
 // SearchTags 搜索标签处理器
@@ -62,7 +62,7 @@ func GetTag(w http.ResponseWriter, r *http.Request) {
 func SearchTags(w http.ResponseWriter, r *http.Request) {
 	keyword := strings.TrimSpace(r.URL.Query().Get("q"))
 	if len(keyword) < 1 {
-		utils.Success(w, []models.Tag{})
+		errors.Success(w, []models.Tag{})
 		return
 	}
 
@@ -72,11 +72,11 @@ func SearchTags(w http.ResponseWriter, r *http.Request) {
 		Limit(10).
 		Find(&tags).Error; err != nil {
 		log.Printf("search tags: failed to search tags, keyword: %s, error: %v", keyword, err)
-		utils.Error(w, 500, "搜索标签失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, tags)
+	errors.Success(w, tags)
 }
 
 // GetOrCreateTagByName 根据名称获取或创建标签

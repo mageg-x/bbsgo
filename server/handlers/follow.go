@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/services"
@@ -21,11 +22,11 @@ func GetFollows(w http.ResponseWriter, r *http.Request) {
 	var follows []models.Follow
 	if err := database.DB.Where("user_id = ?", userID).Preload("FollowUser").Find(&follows).Error; err != nil {
 		log.Printf("get follows: failed to query follows, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取关注列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, follows)
+	errors.Success(w, follows)
 }
 
 // GetFollowers 获取当前用户的粉丝列表处理器
@@ -35,11 +36,11 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 	var followers []models.Follow
 	if err := database.DB.Where("follow_user_id = ?", userID).Preload("User").Find(&followers).Error; err != nil {
 		log.Printf("get followers: failed to query followers, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取粉丝列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, followers)
+	errors.Success(w, followers)
 }
 
 // CreateFollow 创建关注处理器
@@ -53,14 +54,14 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create follow: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 不能关注自己
 	if req.FollowUserID == userID {
 		log.Printf("create follow: cannot follow yourself, userID: %d", userID)
-		utils.Error(w, 400, "不能关注自己")
+		errors.Error(w, errors.CodeCannotFollowSelf, "")
 		return
 	}
 
@@ -68,7 +69,7 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	var followUser models.User
 	if err := database.DB.First(&followUser, req.FollowUserID).Error; err != nil {
 		log.Printf("create follow: user not found, followUserID: %d, error: %v", req.FollowUserID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
@@ -76,7 +77,7 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	var existing models.Follow
 	if err := database.DB.Where("user_id = ? AND follow_user_id = ?", userID, req.FollowUserID).First(&existing).Error; err == nil {
 		log.Printf("create follow: already following, userID: %d, followUserID: %d", userID, req.FollowUserID)
-		utils.Error(w, 400, "已关注该用户")
+		errors.Error(w, errors.CodeAlreadyFollowed, "")
 		return
 	}
 
@@ -88,7 +89,7 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&follow).Error; err != nil {
 		log.Printf("create follow: failed to create follow, userID: %d, followUserID: %d, error: %v", userID, req.FollowUserID, err)
-		utils.Error(w, 500, "关注失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -119,7 +120,7 @@ func CreateFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("create follow: follow created successfully, userID: %d, followUserID: %d", userID, req.FollowUserID)
-	utils.Success(w, follow)
+	errors.Success(w, follow)
 }
 
 // DeleteFollow 取消关注处理器
@@ -133,19 +134,19 @@ func DeleteFollow(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("delete follow: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 删除关注记录
 	if err := database.DB.Unscoped().Where("user_id = ? AND follow_user_id = ?", userID, req.FollowUserID).Delete(&models.Follow{}).Error; err != nil {
 		log.Printf("delete follow: failed to delete follow, userID: %d, followUserID: %d, error: %v", userID, req.FollowUserID, err)
-		utils.Error(w, 500, "取消关注失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete follow: follow deleted successfully, userID: %d, followUserID: %d", userID, req.FollowUserID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // CheckFollow 检查是否关注了指定用户处理器
@@ -156,5 +157,5 @@ func CheckFollow(w http.ResponseWriter, r *http.Request) {
 	var follow models.Follow
 	isFollowing := database.DB.Where("user_id = ? AND follow_user_id = ?", userID, targetUserID).First(&follow).Error == nil
 
-	utils.Success(w, map[string]bool{"is_following": isFollowing})
+	errors.Success(w, map[string]bool{"is_following": isFollowing})
 }

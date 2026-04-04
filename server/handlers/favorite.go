@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -23,7 +23,7 @@ func CreateFavorite(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("create favorite: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -31,7 +31,7 @@ func CreateFavorite(w http.ResponseWriter, r *http.Request) {
 	var req FavoriteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create favorite: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -39,7 +39,7 @@ func CreateFavorite(w http.ResponseWriter, r *http.Request) {
 	var existingFavorite models.Favorite
 	if err := database.DB.Where("user_id = ? AND topic_id = ?", userID, req.TopicID).First(&existingFavorite).Error; err == nil {
 		log.Printf("create favorite: already favorited, userID: %d, topicID: %d", userID, req.TopicID)
-		utils.Error(w, 400, "已经收藏过了")
+		errors.Error(w, errors.CodeAlreadyFollowed, "")
 		return
 	}
 
@@ -51,12 +51,12 @@ func CreateFavorite(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&favorite).Error; err != nil {
 		log.Printf("create favorite: failed to create favorite, userID: %d, topicID: %d, error: %v", userID, req.TopicID, err)
-		utils.Error(w, 500, "收藏失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("create favorite: favorite created successfully, userID: %d, topicID: %d", userID, req.TopicID)
-	utils.Success(w, favorite)
+	errors.Success(w, favorite)
 }
 
 // DeleteFavorite 取消收藏处理器
@@ -66,7 +66,7 @@ func DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete favorite: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -76,7 +76,7 @@ func DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 
 	if topicID == 0 {
 		log.Printf("delete favorite: invalid parameters, topicID: %d", topicID)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -84,32 +84,32 @@ func DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 	var favorite models.Favorite
 	if err := database.DB.Where("user_id = ? AND topic_id = ?", userID, topicID).First(&favorite).Error; err != nil {
 		log.Printf("delete favorite: favorite not found, userID: %d, topicID: %d, error: %v", userID, topicID, err)
-		utils.Error(w, 404, "收藏记录不存在")
+		errors.Error(w, errors.CodeFavoriteNotFound, "")
 		return
 	}
 
 	// 删除收藏记录
 	if err := database.DB.Unscoped().Delete(&favorite).Error; err != nil {
 		log.Printf("delete favorite: failed to delete favorite, id: %d, error: %v", favorite.ID, err)
-		utils.Error(w, 500, "取消收藏失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete favorite: favorite deleted successfully, userID: %d, topicID: %d", userID, topicID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // CheckFavorite 检查收藏状态处理器
 func CheckFavorite(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		utils.Success(w, map[string]interface{}{"favorited": false})
+		errors.Success(w, map[string]interface{}{"favorited": false})
 		return
 	}
 
 	var req FavoriteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.Success(w, map[string]interface{}{"favorited": false})
+		errors.Success(w, map[string]interface{}{"favorited": false})
 		return
 	}
 
@@ -117,11 +117,11 @@ func CheckFavorite(w http.ResponseWriter, r *http.Request) {
 	if err := database.DB.Model(&models.Favorite{}).
 		Where("user_id = ? AND topic_id = ?", userID, req.TopicID).
 		Count(&count).Error; err != nil {
-		utils.Success(w, map[string]interface{}{"favorited": false})
+		errors.Success(w, map[string]interface{}{"favorited": false})
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{"favorited": count > 0})
+	errors.Success(w, map[string]interface{}{"favorited": count > 0})
 }
 
 // GetFavorites 获取当前用户的收藏列表处理器
@@ -130,7 +130,7 @@ func GetFavorites(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("get favorites: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -139,7 +139,7 @@ func GetFavorites(w http.ResponseWriter, r *http.Request) {
 	if err := database.DB.Where("user_id = ?", userID).Preload("Topic").Preload("Topic.User").Preload("Topic.Forum").
 		Order("created_at DESC").Find(&favorites).Error; err != nil {
 		log.Printf("get favorites: failed to query favorites, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取收藏列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -202,5 +202,5 @@ func GetFavorites(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	utils.Success(w, response)
+	errors.Success(w, response)
 }

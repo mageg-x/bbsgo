@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/utils"
@@ -17,32 +18,32 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("get profile: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("get profile: user not found, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
-	utils.Success(w, user)
+	errors.Success(w, user)
 }
 
 func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("update profile: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		log.Printf("update profile: failed to decode request body, userID: %d, error: %v", userID, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -50,7 +51,7 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		hashedPassword, err := utils.HashPassword(password)
 		if err != nil {
 			log.Printf("update profile: failed to hash password, userID: %d, error: %v", userID, err)
-			utils.Error(w, 500, "密码加密失败")
+			errors.Error(w, errors.CodePasswordHashFailed, "")
 			return
 		}
 		updates["password_hash"] = hashedPassword
@@ -67,26 +68,26 @@ func UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
 		log.Printf("update profile: failed to update profile, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "更新失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("update profile: user not found after update, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
 	log.Printf("update profile: profile updated successfully, userID: %d", userID)
-	utils.Success(w, user)
+	errors.Success(w, user)
 }
 
 func GetCurrentUserTopics(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("get current user topics: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -111,11 +112,11 @@ func GetCurrentUserTopics(w http.ResponseWriter, r *http.Request) {
 	if err := database.DB.Where("user_id = ?", userID).Preload("User").Preload("Forum").
 		Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&topics).Error; err != nil {
 		log.Printf("get current user topics: failed to query topics, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取话题失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      topics,
 		"total":     total,
 		"page":      page,
@@ -127,17 +128,17 @@ func GetCreditUsers(w http.ResponseWriter, r *http.Request) {
 	var users []models.User
 	if err := database.DB.Order("credits DESC").Limit(10).Find(&users).Error; err != nil {
 		log.Printf("get credit users: failed to query users, error: %v", err)
-		utils.Error(w, 500, "获取排行榜失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, users)
+	errors.Success(w, users)
 }
 
 func SearchUsers(w http.ResponseWriter, r *http.Request) {
 	keyword := r.URL.Query().Get("q")
 	if keyword == "" {
-		utils.Success(w, []models.User{})
+		errors.Success(w, []models.User{})
 		return
 	}
 
@@ -167,12 +168,12 @@ func SearchUsers(w http.ResponseWriter, r *http.Request) {
 		Limit(pageSize).
 		Find(&users).Error; err != nil {
 		log.Printf("search users: failed to search users, keyword: %s, error: %v", keyword, err)
-		utils.Error(w, 500, "搜索失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("search users: search completed, keyword: %s, results: %d", keyword, total)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":  users,
 		"total": total,
 		"page":  page,
@@ -186,11 +187,11 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("get user: user not found, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
-	utils.Success(w, user)
+	errors.Success(w, user)
 }
 
 func GetUserStats(w http.ResponseWriter, r *http.Request) {
@@ -205,7 +206,7 @@ func GetUserStats(w http.ResponseWriter, r *http.Request) {
 	database.DB.Model(&models.Follow{}).Where("user_id = ?", userID).Count(&followCount)
 	database.DB.Model(&models.Follow{}).Where("follow_user_id = ?", userID).Count(&followerCount)
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"topic_count":    topicCount,
 		"comment_count":  commentCount,
 		"follow_count":   followCount,
@@ -235,11 +236,11 @@ func GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 		Offset(offset).Limit(pageSize).
 		Find(&followers).Error; err != nil {
 		log.Printf("get user followers: failed to query followers, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取粉丝列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":  followers,
 		"total": total,
 		"page":  page,
@@ -268,7 +269,7 @@ func GetUserTopics(w http.ResponseWriter, r *http.Request) {
 		Offset(offset).Limit(pageSize).
 		Find(&topics).Error; err != nil {
 		log.Printf("get user topics: failed to query topics, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取话题列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -293,7 +294,7 @@ func GetUserTopics(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      response,
 		"total":     total,
 		"page":      page,
@@ -305,7 +306,7 @@ func GetFollowTopics(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("get follow topics: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -320,7 +321,7 @@ func GetFollowTopics(w http.ResponseWriter, r *http.Request) {
 	database.DB.Model(&models.Follow{}).Where("user_id = ?", userID).Pluck("follow_user_id", &followIDs)
 
 	if len(followIDs) == 0 {
-		utils.Success(w, map[string]interface{}{
+		errors.Success(w, map[string]interface{}{
 			"list":      []models.Topic{},
 			"total":     0,
 			"page":      page,
@@ -340,11 +341,11 @@ func GetFollowTopics(w http.ResponseWriter, r *http.Request) {
 		Offset(offset).Limit(pageSize).
 		Find(&topics).Error; err != nil {
 		log.Printf("get follow topics: failed to query topics, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取关注动态失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      topics,
 		"total":     total,
 		"page":      page,

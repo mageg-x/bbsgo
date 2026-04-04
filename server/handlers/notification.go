@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -41,7 +41,7 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 		Limit(pageSize).
 		Find(&notifications).Error; err != nil {
 		log.Printf("get notifications: failed to query notifications, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取通知列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -63,7 +63,7 @@ func GetNotifications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      notificationsWithBadge,
 		"total":     total,
 		"page":      page,
@@ -78,11 +78,11 @@ func GetUnreadNotificationCount(w http.ResponseWriter, r *http.Request) {
 	var count int64
 	if err := database.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", userID, false).Count(&count).Error; err != nil {
 		log.Printf("get unread notification count: failed to count notifications, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取未读数量失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]int64{"count": count})
+	errors.Success(w, map[string]int64{"count": count})
 }
 
 // MarkAllNotificationsRead 标记所有通知已读处理器
@@ -91,12 +91,12 @@ func MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", userID, false).Update("is_read", true).Error; err != nil {
 		log.Printf("mark all notifications read: failed to mark notifications as read, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "标记已读失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("mark all notifications read: notifications marked as read, userID: %d", userID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // CreateNotification 创建通知（内部函数）

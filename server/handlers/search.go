@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -15,7 +15,7 @@ func Search(w http.ResponseWriter, r *http.Request) {
 	keyword := r.URL.Query().Get("keyword")
 	if keyword == "" {
 		log.Printf("search: keyword is empty")
-		utils.Error(w, 400, "请输入搜索关键词")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -49,12 +49,12 @@ func Search(w http.ResponseWriter, r *http.Request) {
 		Limit(pageSize).
 		Find(&topics).Error; err != nil {
 		log.Printf("search: failed to search topics, keyword: %s, error: %v", keyword, err)
-		utils.Error(w, 500, "搜索失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("search: search completed, keyword: %s, results: %d", keyword, total)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      topics,
 		"total":     total,
 		"page":      page,

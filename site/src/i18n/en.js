@@ -549,5 +549,61 @@ export default {
     submitVote: 'Submit Vote',
     submitting: 'Submitting...',
     voted: 'Voted'
+  },
+  errors: {
+    // 1xxx - Authentication & Registration
+    registerDisabled: 'Registration is disabled',
+    invalidParams: 'Invalid request parameters',
+    incompleteInfo: 'Please fill in all required fields',
+    usernameExists: 'Username already exists',
+    emailExists: 'Email already registered',
+    passwordHashFailed: 'Password encryption failed',
+    tokenGenerateFailed: 'Token generation failed',
+    usernameOrPassword: 'Incorrect username or password',
+    invalidEmail: 'Invalid email format',
+    verifyCodeError: 'Incorrect verification code',
+    verifyCodeExpired: 'Verification code expired',
+    emailNotRegistered: 'Email not registered',
+    // 2xxx - User Related
+    userNotFound: 'User not found',
+    noPermission: 'Permission denied',
+    cannotFollowSelf: 'Cannot follow yourself',
+    alreadyFollowed: 'Already following this user',
+    notFollowed: 'Not following this user yet',
+    creditsInsufficient: 'Insufficient credits',
+    reputationLow: 'Reputation too low',
+    // 3xxx - Content Operations
+    topicNotFound: 'Topic not found',
+    commentNotFound: 'Comment not found',
+    forumNotFound: 'Forum not found',
+    tagNotFound: 'Tag not found',
+    favoriteNotFound: 'Favorite not found',
+    messageNotFound: 'Message not found',
+    notificationNotFound: 'Notification not found',
+    pollNotFound: 'Poll not found',
+    draftNotFound: 'Draft not found',
+    // 4xxx - Business Restrictions
+    postDisabled: 'Posting is disabled',
+    commentDisabled: 'Commenting is disabled',
+    postIntervalFast: 'Posting too frequently',
+    sensitiveContent: 'Content contains sensitive words',
+    titleTooLong: 'Title exceeds maximum length',
+    contentTooLong: 'Content exceeds maximum length',
+    pollOptionsFew: 'Not enough poll options',
+    pollEnded: 'Poll has ended',
+    alreadyVoted: 'Already voted',
+    voteExceedMax: 'Exceeds maximum vote selections',
+    fileSizeExceeded: 'File size exceeds limit',
+    fileTypeUnsupported: 'File type not supported',
+    imageSizeExceeded: 'Image size exceeds limit',
+    // 5xxx - System Errors
+    serverInternal: 'Internal server error',
+    databaseError: 'Database operation failed',
+    uploadFailed: 'File upload failed',
+    cacheError: 'Cache operation failed',
+    thirdPartyError: 'Third-party service error',
+    // Common
+    unknown: 'Unknown error',
+    networkError: 'Network error'
   }
 }

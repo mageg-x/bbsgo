@@ -3,8 +3,8 @@ package handlers
 import (
 	"bbsgo/cache"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"log"
 	"net/http"
 	"time"
@@ -16,7 +16,7 @@ import (
 func GetForums(w http.ResponseWriter, r *http.Request) {
 	// 尝试从缓存获取
 	if cached, ok := cache.Get("forums:list"); ok {
-		utils.Success(w, cached)
+		errors.Success(w, cached)
 		return
 	}
 
@@ -24,12 +24,12 @@ func GetForums(w http.ResponseWriter, r *http.Request) {
 	var forums []models.Forum
 	if err := database.DB.Where("name != ?", "全部").Order("sort_order ASC, id ASC").Find(&forums).Error; err != nil {
 		log.Printf("get forums: failed to query forums, error: %v", err)
-		utils.Error(w, 500, "获取版块列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	// 设置缓存
 	cache.Set("forums:list", forums, 5*time.Minute)
 
-	utils.Success(w, forums)
+	errors.Success(w, forums)
 }

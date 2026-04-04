@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
 	"bbsgo/utils"
 	"context"
@@ -31,7 +32,7 @@ func Auth(next http.Handler) http.Handler {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			log.Printf("auth middleware: authorization header is empty, path: %s, method: %s", r.URL.Path, r.Method)
-			utils.Error(w, 401, "未提供认证令牌")
+			errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 			return
 		}
 
@@ -42,7 +43,7 @@ func Auth(next http.Handler) http.Handler {
 		claims, err := utils.ParseToken(tokenString)
 		if err != nil {
 			log.Printf("auth middleware: parse token failed, path: %s, method: %s, error: %v", r.URL.Path, r.Method, err)
-			utils.Error(w, 401, "无效的认证令牌")
+			errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 			return
 		}
 
@@ -61,7 +62,7 @@ func AdminAuth(next http.Handler) http.Handler {
 		userID, ok := GetUserIDFromContext(r.Context())
 		if !ok {
 			log.Printf("admin auth middleware: failed to get user id from context, path: %s, method: %s", r.URL.Path, r.Method)
-			utils.Error(w, 401, "未授权")
+			errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 			return
 		}
 
@@ -69,14 +70,14 @@ func AdminAuth(next http.Handler) http.Handler {
 		var user models.User
 		if err := database.DB.First(&user, userID).Error; err != nil {
 			log.Printf("admin auth middleware: user not found, userID: %d, path: %s, error: %v", userID, r.URL.Path, err)
-			utils.Error(w, 401, "用户不存在")
+			errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUserNotFound, "")
 			return
 		}
 
 		// 检查用户角色权限
 		if user.Role < 2 {
 			log.Printf("admin auth middleware: insufficient permissions, userID: %d, role: %d, path: %s", userID, user.Role, r.URL.Path)
-			utils.Error(w, 403, "需要管理员权限")
+			errors.ErrorWithStatus(w, http.StatusForbidden, errors.CodeNoPermission, "")
 			return
 		}
 

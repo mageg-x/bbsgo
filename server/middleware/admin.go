@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"log"
 	"net/http"
 )
@@ -17,7 +17,7 @@ func Admin(next http.Handler) http.Handler {
 		userID, ok := GetUserIDFromContext(r.Context())
 		if !ok {
 			log.Printf("admin middleware: failed to get user id from context")
-			utils.Error(w, 401, "未认证")
+			errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 			return
 		}
 
@@ -25,14 +25,14 @@ func Admin(next http.Handler) http.Handler {
 		var user models.User
 		if err := database.DB.First(&user, userID).Error; err != nil {
 			log.Printf("admin middleware: user not found, userID: %d, error: %v", userID, err)
-			utils.Error(w, 401, "用户不存在")
+			errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUserNotFound, "")
 			return
 		}
 
 		// 检查用户角色权限
 		if user.Role < 2 {
 			log.Printf("admin middleware: insufficient permissions, userID: %d, role: %d", userID, user.Role)
-			utils.Error(w, 403, "需要管理员权限")
+			errors.ErrorWithStatus(w, http.StatusForbidden, errors.CodeNoPermission, "")
 			return
 		}
 

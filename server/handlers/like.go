@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/services"
-	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -27,7 +27,7 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("create like: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -35,14 +35,14 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 	var req LikeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create like: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证目标类型
 	if req.TargetType != "topic" && req.TargetType != "comment" {
 		log.Printf("create like: invalid target type, targetType: %s", req.TargetType)
-		utils.Error(w, 400, "无效的目标类型")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -50,7 +50,7 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 	var existingLike models.Like
 	if err := database.DB.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, req.TargetType, req.TargetID).First(&existingLike).Error; err == nil {
 		log.Printf("create like: already liked, userID: %d, targetType: %s, targetID: %d", userID, req.TargetType, req.TargetID)
-		utils.Error(w, 400, "已经点赞过了")
+		errors.Error(w, errors.CodeAlreadyFollowed, "")
 		return
 	}
 
@@ -63,7 +63,7 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&like).Error; err != nil {
 		log.Printf("create like: failed to create like, userID: %d, targetType: %s, targetID: %d, error: %v", userID, req.TargetType, req.TargetID, err)
-		utils.Error(w, 500, "点赞失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -97,7 +97,7 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("create like: like created successfully, userID: %d, targetType: %s, targetID: %d", userID, req.TargetType, req.TargetID)
-	utils.Success(w, like)
+	errors.Success(w, like)
 }
 
 // DeleteLike 取消点赞处理器
@@ -107,7 +107,7 @@ func DeleteLike(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete like: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -118,7 +118,7 @@ func DeleteLike(w http.ResponseWriter, r *http.Request) {
 
 	if targetType == "" || targetID == 0 {
 		log.Printf("delete like: invalid parameters, targetType: %s, targetID: %d", targetType, targetID)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -126,14 +126,14 @@ func DeleteLike(w http.ResponseWriter, r *http.Request) {
 	var like models.Like
 	if err := database.DB.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, targetType, targetID).First(&like).Error; err != nil {
 		log.Printf("delete like: like not found, userID: %d, targetType: %s, targetID: %d, error: %v", userID, targetType, targetID, err)
-		utils.Error(w, 404, "点赞记录不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 删除点赞记录
 	if err := database.DB.Unscoped().Delete(&like).Error; err != nil {
 		log.Printf("delete like: failed to delete like, id: %d, error: %v", like.ID, err)
-		utils.Error(w, 500, "取消点赞失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -159,7 +159,7 @@ func DeleteLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("delete like: like deleted successfully, userID: %d, targetType: %s, targetID: %d", userID, targetType, targetID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // CheckLike 检查点赞状态处理器
@@ -167,7 +167,7 @@ func DeleteLike(w http.ResponseWriter, r *http.Request) {
 func CheckLike(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		utils.Success(w, map[string]interface{}{"liked": false})
+		errors.Success(w, map[string]interface{}{"liked": false})
 		return
 	}
 
@@ -177,7 +177,7 @@ func CheckLike(w http.ResponseWriter, r *http.Request) {
 		TargetID   uint   `json:"target_id"`  // 单条检查时使用
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.Success(w, map[string]interface{}{"liked": false})
+		errors.Success(w, map[string]interface{}{"liked": false})
 		return
 	}
 
@@ -185,14 +185,14 @@ func CheckLike(w http.ResponseWriter, r *http.Request) {
 	if len(req.TargetIDs) > 0 {
 		var likes []models.Like
 		if err := database.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, req.TargetType, req.TargetIDs).Find(&likes).Error; err != nil {
-			utils.Success(w, map[string]interface{}{"liked_map": map[uint]bool{}})
+			errors.Success(w, map[string]interface{}{"liked_map": map[uint]bool{}})
 			return
 		}
 		likedMap := make(map[uint]bool)
 		for _, like := range likes {
 			likedMap[like.TargetID] = true
 		}
-		utils.Success(w, map[string]interface{}{"liked_map": likedMap})
+		errors.Success(w, map[string]interface{}{"liked_map": likedMap})
 		return
 	}
 
@@ -201,9 +201,9 @@ func CheckLike(w http.ResponseWriter, r *http.Request) {
 	if err := database.DB.Model(&models.Like{}).
 		Where("user_id = ? AND target_type = ? AND target_id = ?", userID, req.TargetType, req.TargetID).
 		Count(&count).Error; err != nil {
-		utils.Success(w, map[string]interface{}{"liked": false})
+		errors.Success(w, map[string]interface{}{"liked": false})
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{"liked": count > 0})
+	errors.Success(w, map[string]interface{}{"liked": count > 0})
 }

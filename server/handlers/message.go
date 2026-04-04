@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -47,11 +47,11 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 		Preload("ToUser").
 		Find(&messages).Error; err != nil {
 		log.Printf("get messages: failed to query messages, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取私信列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      messages,
 		"total":     total,
 		"page":      page,
@@ -74,7 +74,7 @@ func GetMessageConversation(w http.ResponseWriter, r *http.Request) {
 		Preload("ToUser").
 		Find(&messages).Error; err != nil {
 		log.Printf("get message conversation: failed to query messages, userID: %d, otherUserID: %d, error: %v", userID, otherUserID, err)
-		utils.Error(w, 500, "获取会话失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -85,7 +85,7 @@ func GetMessageConversation(w http.ResponseWriter, r *http.Request) {
 		log.Printf("get message conversation: failed to mark messages as read, userID: %d, otherUserID: %d, error: %v", userID, otherUserID, err)
 	}
 
-	utils.Success(w, messages)
+	errors.Success(w, messages)
 }
 
 // SendMessage 发送私信处理器
@@ -99,14 +99,14 @@ func SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("send message: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证内容
 	if req.Content == "" {
 		log.Printf("send message: content is empty, fromUserID: %d, toUserID: %d", userID, req.ToUserID)
-		utils.Error(w, 400, "消息内容不能为空")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
@@ -114,7 +114,7 @@ func SendMessage(w http.ResponseWriter, r *http.Request) {
 	var toUser models.User
 	if err := database.DB.First(&toUser, req.ToUserID).Error; err != nil {
 		log.Printf("send message: recipient not found, toUserID: %d, error: %v", req.ToUserID, err)
-		utils.Error(w, 404, "接收用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
@@ -128,7 +128,7 @@ func SendMessage(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&message).Error; err != nil {
 		log.Printf("send message: failed to create message, fromUserID: %d, toUserID: %d, error: %v", userID, req.ToUserID, err)
-		utils.Error(w, 500, "发送失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -145,7 +145,7 @@ func SendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("send message: message sent successfully, fromUserID: %d, toUserID: %d", userID, req.ToUserID)
-	utils.Success(w, message)
+	errors.Success(w, message)
 }
 
 // MarkMessagesRead 标记私信已读处理器
@@ -168,7 +168,7 @@ func MarkMessagesRead(w http.ResponseWriter, r *http.Request) {
 		log.Printf("mark messages read: failed to mark messages as read, userID: %d, fromUserID: %d, error: %v", userID, req.FromUserID, err)
 	}
 
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // GetUnreadMessageCount 获取未读私信数量处理器
@@ -178,9 +178,9 @@ func GetUnreadMessageCount(w http.ResponseWriter, r *http.Request) {
 	var count int64
 	if err := database.DB.Model(&models.Message{}).Where("to_user_id = ? AND is_read = ?", userID, false).Count(&count).Error; err != nil {
 		log.Printf("get unread message count: failed to count messages, userID: %d, error: %v", userID, err)
-		utils.Error(w, 500, "获取未读数量失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]int64{"count": count})
+	errors.Success(w, map[string]int64{"count": count})
 }

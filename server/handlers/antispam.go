@@ -3,8 +3,8 @@ package handlers
 import (
 	"bbsgo/antispam"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -16,13 +16,13 @@ import (
 func GetAntiSpamConfig(w http.ResponseWriter, r *http.Request) {
 	config := antispam.GetConfigService()
 	allConfigs := config.GetAll()
-	utils.Success(w, allConfigs)
+	errors.Success(w, allConfigs)
 }
 
 func UpdateAntiSpamConfig(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -46,12 +46,12 @@ func UpdateAntiSpamConfig(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := config.Set(key, strValue); err != nil {
-			utils.Error(w, 500, "保存配置失败")
+			errors.Error(w, errors.CodeServerInternal, "")
 			return
 		}
 	}
 
-	utils.Success(w, map[string]string{"message": "配置保存成功"})
+	errors.Success(w, map[string]string{"message": "配置保存成功"})
 }
 
 func AdjustUserReputation(w http.ResponseWriter, r *http.Request) {
@@ -64,17 +64,17 @@ func AdjustUserReputation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	reputationService := antispam.NewReputationService()
 	if err := reputationService.ChangeReputation(uint(userID), req.Change, req.Reason, 0); err != nil {
-		utils.Error(w, 500, "调整信誉分失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]string{"message": "信誉分调整成功"})
+	errors.Success(w, map[string]string{"message": "信誉分调整成功"})
 }
 
 func AdminBanUser(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,7 @@ func AdminBanUser(w http.ResponseWriter, r *http.Request) {
 		Where("end_time IS NULL OR end_time > ?", time.Now()).
 		First(&existingBan)
 	if result.Error == nil {
-		utils.Error(w, 400, "用户已被禁言")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -115,11 +115,11 @@ func AdminBanUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := database.DB.Create(&ban).Error; err != nil {
-		utils.Error(w, 500, "禁言失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]string{"message": "用户已被禁言"})
+	errors.Success(w, map[string]string{"message": "用户已被禁言"})
 }
 
 func UnbanUser(w http.ResponseWriter, r *http.Request) {
@@ -129,11 +129,11 @@ func UnbanUser(w http.ResponseWriter, r *http.Request) {
 	if err := database.DB.Model(&models.UserBan{}).
 		Where("user_id = ? AND is_active = ?", userID, true).
 		Update("is_active", false).Error; err != nil {
-		utils.Error(w, 500, "解禁失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]string{"message": "用户已解禁"})
+	errors.Success(w, map[string]string{"message": "用户已解禁"})
 }
 
 func GetUserReputationLogs(w http.ResponseWriter, r *http.Request) {
@@ -149,11 +149,11 @@ func GetUserReputationLogs(w http.ResponseWriter, r *http.Request) {
 	reputationService := antispam.NewReputationService()
 	logs, total, err := reputationService.GetReputationLogs(uint(userID), page, pageSize)
 	if err != nil {
-		utils.Error(w, 500, "获取信誉分日志失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":  logs,
 		"total": total,
 		"page":  page,
@@ -171,13 +171,13 @@ func GetUserBanStatus(w http.ResponseWriter, r *http.Request) {
 		First(&ban)
 
 	if result.Error != nil {
-		utils.Success(w, map[string]interface{}{
+		errors.Success(w, map[string]interface{}{
 			"is_banned": false,
 		})
 		return
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"is_banned": true,
 		"ban":       ban,
 	})
@@ -212,7 +212,7 @@ func GetAntiSpamStats(w http.ResponseWriter, r *http.Request) {
 		Where("status = ?", "pending").
 		Count(&pendingReports)
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"total_operations":  totalOperations,
 		"today_operations":  todayOperations,
 		"low_quality_count": lowQualityCount,

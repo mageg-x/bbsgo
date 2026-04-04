@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -18,11 +18,11 @@ func GetForumCategories(w http.ResponseWriter, r *http.Request) {
 	var categories []models.ForumCategory
 	if err := database.DB.Where("is_active = ?", true).Order("sort_order").Find(&categories).Error; err != nil {
 		log.Printf("get forum categories: failed to query categories, error: %v", err)
-		utils.Error(w, 500, "获取分类列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, categories)
+	errors.Success(w, categories)
 }
 
 // GetAllForumCategories 获取所有版块分类列表处理器（管理员）
@@ -31,18 +31,18 @@ func GetAllForumCategories(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("get all forum categories: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
 	var categories []models.ForumCategory
 	if err := database.DB.Order("sort_order").Find(&categories).Error; err != nil {
 		log.Printf("get all forum categories: failed to query categories, error: %v", err)
-		utils.Error(w, 500, "获取分类列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
-	utils.Success(w, categories)
+	errors.Success(w, categories)
 }
 
 // CreateForumCategory 创建版块分类处理器（管理员）
@@ -51,7 +51,7 @@ func CreateForumCategory(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("create forum category: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -59,19 +59,19 @@ func CreateForumCategory(w http.ResponseWriter, r *http.Request) {
 	var req models.ForumCategory
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create forum category: failed to decode request body, error: %v", err)
-		utils.Error(w, http.StatusBadRequest, "无效的请求数据")
+		errors.ErrorWithStatus(w, http.StatusBadRequest, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 创建分类
 	if err := database.DB.Create(&req).Error; err != nil {
 		log.Printf("create forum category: failed to create category, name: %s, error: %v", req.Name, err)
-		utils.Error(w, 500, "创建分类失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("create forum category: category created successfully, id: %d, name: %s", req.ID, req.Name)
-	utils.Success(w, req)
+	errors.Success(w, req)
 }
 
 // UpdateForumCategory 更新版块分类处理器（管理员）
@@ -80,7 +80,7 @@ func UpdateForumCategory(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("update forum category: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -91,7 +91,7 @@ func UpdateForumCategory(w http.ResponseWriter, r *http.Request) {
 	var req models.ForumCategory
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("update forum category: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, http.StatusBadRequest, "无效的请求数据")
+		errors.ErrorWithStatus(w, http.StatusBadRequest, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -99,7 +99,7 @@ func UpdateForumCategory(w http.ResponseWriter, r *http.Request) {
 	var category models.ForumCategory
 	if result := database.DB.First(&category, id); result.Error != nil {
 		log.Printf("update forum category: category not found, id: %d, error: %v", id, result.Error)
-		utils.Error(w, http.StatusNotFound, "分类不存在")
+		errors.ErrorWithStatus(w, http.StatusNotFound, errors.CodeForumNotFound, "")
 		return
 	}
 
@@ -113,12 +113,12 @@ func UpdateForumCategory(w http.ResponseWriter, r *http.Request) {
 	// 保存更新
 	if err := database.DB.Save(&category).Error; err != nil {
 		log.Printf("update forum category: failed to update category, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "更新分类失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("update forum category: category updated successfully, id: %d, name: %s", id, req.Name)
-	utils.Success(w, category)
+	errors.Success(w, category)
 }
 
 // DeleteForumCategory 删除版块分类处理器（管理员）
@@ -127,7 +127,7 @@ func DeleteForumCategory(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete forum category: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, http.StatusUnauthorized, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -137,10 +137,10 @@ func DeleteForumCategory(w http.ResponseWriter, r *http.Request) {
 	// 物理删除分类
 	if err := database.DB.Unscoped().Delete(&models.ForumCategory{}, id).Error; err != nil {
 		log.Printf("delete forum category: failed to delete category, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除分类失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete forum category: category deleted successfully, id: %d", id)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }

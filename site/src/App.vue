@@ -122,9 +122,20 @@
         <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div class="flex items-center space-x-1 py-1.5 sm:py-2 overflow-x-auto scrollbar-hide">
             <router-link
+              key="all"
+              to="/"
+              :class="[
+                'px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
+                !route.query.forum
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-200'
+              ]">
+              {{ t('nav.allForums') }}
+            </router-link>
+            <router-link
               v-for="forum in forums"
               :key="forum.id"
-              :to="forum.id === 1 ? '/' : `/?forum=${forum.id}`"
+              :to="`/?forum=${forum.id}`"
               :class="[
                 'px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
                 currentForumId === forum.id
@@ -171,7 +182,7 @@ const unreadCount = ref(0)
 
 const currentForumId = computed(() => {
   const forumId = route.query.forum
-  return forumId ? parseInt(forumId) : 1
+  return forumId ? parseInt(forumId) : null
 })
 
 const isAuthPage = computed(() => {
@@ -257,7 +268,7 @@ async function loadForums() {
   try {
     const res = await api.get('/forums')
     // 在板块列表最前面加一个"全部"选项
-    forums.value = [{ id: 1, name: t('nav.allForums'), sort_order: 0 }, ...(res || [])]
+    forums.value = res || []
   } catch (e) {
     console.error(e)
   }

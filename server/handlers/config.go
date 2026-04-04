@@ -3,9 +3,9 @@ package handlers
 import (
 	"bbsgo/cache"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -26,7 +26,7 @@ func GetSiteConfig(w http.ResponseWriter, r *http.Request) {
 	var configs []models.SiteConfig
 	if err := database.DB.Find(&configs).Error; err != nil {
 		log.Printf("get site config: failed to query configs, error: %v", err)
-		utils.Error(w, 500, "获取配置失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -36,7 +36,7 @@ func GetSiteConfig(w http.ResponseWriter, r *http.Request) {
 		configMap[config.Key] = config.Value
 	}
 
-	utils.Success(w, configMap)
+	errors.Success(w, configMap)
 }
 
 // UpdateSiteConfig 更新网站配置处理器
@@ -46,7 +46,7 @@ func UpdateSiteConfig(w http.ResponseWriter, r *http.Request) {
 	_, ok := middleware.GetAdminIDFromContext(r.Context())
 	if !ok {
 		log.Printf("update site config: unauthorized access")
-		utils.Error(w, http.StatusUnauthorized, "未授权")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -54,7 +54,7 @@ func UpdateSiteConfig(w http.ResponseWriter, r *http.Request) {
 	var req map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("update site config: failed to decode request body, error: %v", err)
-		utils.Error(w, http.StatusBadRequest, "无效的请求数据")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -82,5 +82,5 @@ func UpdateSiteConfig(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("update site config: updated %d configs", len(req))
 	clearConfigCache()
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }

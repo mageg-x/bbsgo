@@ -48,6 +48,7 @@ func SetupRoutes() *mux.Router {
 	api.HandleFunc("/users/{id}/stats", handlers.GetUserStats).Methods("GET")         // 获取用户统计
 	api.HandleFunc("/users/{id}/followers", handlers.GetUserFollowers).Methods("GET") // 获取用户粉丝
 	api.HandleFunc("/users/{id}/topics", handlers.GetUserTopics).Methods("GET")       // 获取用户话题
+	api.HandleFunc("/users/{id}/badges", handlers.GetUserBadgesByID).Methods("GET")  // 获取指定用户勋章
 	api.HandleFunc("/search", handlers.Search).Methods("GET")                         // 搜索
 
 	// 投票公开接口
@@ -124,7 +125,6 @@ func SetupRoutes() *mux.Router {
 	// 勋章操作
 	auth.HandleFunc("/badges", handlers.GetBadges).Methods("GET")                     // 获取勋章列表
 	auth.HandleFunc("/badges/progress", handlers.GetUserBadgeProgress).Methods("GET") // 获取用户勋章进度
-	auth.HandleFunc("/users/{id}/badges", handlers.GetUserBadgesByID).Methods("GET")  // 获取指定用户勋章
 
 	// 文件上传
 	auth.HandleFunc("/upload", handlers.UploadFile).Methods("POST")           // 上传文件

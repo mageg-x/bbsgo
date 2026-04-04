@@ -3,8 +3,8 @@ package handlers
 import (
 	"bbsgo/cache"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/models"
-	"bbsgo/utils"
 	"log"
 	"net/http"
 	"time"
@@ -16,7 +16,7 @@ import (
 func GetAnnouncements(w http.ResponseWriter, r *http.Request) {
 	// 尝试从缓存获取
 	if cached, ok := cache.Get("announcements:list"); ok {
-		utils.Success(w, cached)
+		errors.Success(w, cached)
 		return
 	}
 
@@ -28,12 +28,12 @@ func GetAnnouncements(w http.ResponseWriter, r *http.Request) {
 		Order("is_pinned DESC, created_at DESC").
 		Find(&announcements).Error; err != nil {
 		log.Printf("get announcements: failed to query announcements, error: %v", err)
-		utils.Error(w, 500, "获取公告列表失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	// 设置缓存
 	cache.Set("announcements:list", announcements, 5*time.Minute)
 
-	utils.Success(w, announcements)
+	errors.Success(w, announcements)
 }

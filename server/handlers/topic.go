@@ -3,6 +3,7 @@ package handlers
 import (
 	"bbsgo/antispam"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/services"
@@ -77,7 +78,7 @@ func GetTopics(w http.ResponseWriter, r *http.Request) {
 	// 执行查询
 	if err := dbQuery.Offset(offset).Limit(pageSize).Find(&topics).Error; err != nil {
 		log.Printf("get topics: failed to query topics, error: %v", err)
-		utils.Error(w, 500, "获取话题失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -136,7 +137,7 @@ func GetTopics(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      response,
 		"total":     total,
 		"page":      page,
@@ -152,7 +153,7 @@ func GetTopic(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.Preload("User").Preload("Forum").First(&topic, id).Error; err != nil {
 		log.Printf("get topic: topic not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
@@ -161,7 +162,7 @@ func GetTopic(w http.ResponseWriter, r *http.Request) {
 		log.Printf("get topic: failed to increment view count, id: %d, error: %v", id, err)
 	}
 
-	utils.Success(w, topic)
+	errors.Success(w, topic)
 }
 
 // CreateTopic 创建话题处理器
@@ -171,7 +172,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("CreateTopic PANIC: %v", err)
-			utils.Error(w, 500, "服务器内部错误")
+			errors.Error(w, errors.CodeServerInternal, "")
 		}
 	}()
 
@@ -179,14 +180,14 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("create topic: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
 	// 检查是否允许发帖
 	if !utils.GetConfigBool("allow_post", true) {
 		log.Printf("create topic: create topic disabled")
-		utils.Error(w, 400, "发帖功能已关闭")
+		errors.Error(w, errors.CodePostDisabled, "")
 		return
 	}
 
@@ -199,21 +200,21 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create topic: failed to decode request body, error: %v", err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证必填字段
 	if req.Title == "" || req.Content == "" || req.ForumID == 0 {
 		log.Printf("create topic: incomplete topic info, title: %s, forumID: %d", req.Title, req.ForumID)
-		utils.Error(w, 400, "请填写完整信息")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
 	// 验证标签数量
 	if len(req.TagNames) > 3 {
 		log.Printf("create topic: too many tags, count: %d", len(req.TagNames))
-		utils.Error(w, 400, "最多只能添加3个标签")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -222,7 +223,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	checkResult := antispamMiddleware.CheckTopicCreate(userID, req.Content)
 	if !checkResult.Allowed {
 		log.Printf("create topic: antispam check failed, userID: %d, reason: %s", userID, checkResult.Reason)
-		utils.Error(w, 400, checkResult.Reason)
+		errors.Error(w, errors.CodeSensitiveContent, "")
 		return
 	}
 
@@ -238,7 +239,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&topic).Error; err != nil {
 		log.Printf("create topic: failed to create topic, userID: %d, forumID: %d, error: %v", userID, req.ForumID, err)
-		utils.Error(w, 500, "发布失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -301,7 +302,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("create topic: [DEBUG] before Success, w=%v, topic=%+v", w != nil, topic)
-	utils.Success(w, topic)
+	errors.Success(w, topic)
 	log.Printf("create topic: [DEBUG] after Success")
 
 	// 检查并授予勋章
@@ -315,7 +316,7 @@ func UpdateTopic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("update topic: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -326,14 +327,14 @@ func UpdateTopic(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, id).Error; err != nil {
 		log.Printf("update topic: topic not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 验证权限：仅作者可以更新
 	if topic.UserID != userID {
 		log.Printf("update topic: permission denied, topicID: %d, userID: %d", id, userID)
-		utils.Error(w, 403, "无权限编辑")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -341,7 +342,7 @@ func UpdateTopic(w http.ResponseWriter, r *http.Request) {
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		log.Printf("update topic: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -360,7 +361,7 @@ func UpdateTopic(w http.ResponseWriter, r *http.Request) {
 	// 执行更新
 	if err := database.DB.Model(&topic).Updates(updates).Error; err != nil {
 		log.Printf("update topic: failed to update topic, id: %d, userID: %d, error: %v", id, userID, err)
-		utils.Error(w, 500, "更新失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -370,7 +371,7 @@ func UpdateTopic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("update topic: topic updated successfully, id: %d, userID: %d", id, userID)
-	utils.Success(w, topic)
+	errors.Success(w, topic)
 }
 
 // DeleteTopic 删除话题处理器
@@ -380,7 +381,7 @@ func DeleteTopic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete topic: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -391,7 +392,7 @@ func DeleteTopic(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, id).Error; err != nil {
 		log.Printf("delete topic: topic not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
@@ -399,26 +400,26 @@ func DeleteTopic(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("delete topic: user not found, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
 	// 验证权限：作者或管理员(role>=1)可以删除
 	if topic.UserID != userID && user.Role < 1 {
 		log.Printf("delete topic: permission denied, topicID: %d, userID: %d, topicUserID: %d", id, userID, topic.UserID)
-		utils.Error(w, 403, "无权限删除")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
 	// 物理删除话题（不保留软删除）
 	if err := database.DB.Unscoped().Delete(&topic).Error; err != nil {
 		log.Printf("delete topic: failed to delete topic, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("delete topic: topic deleted successfully, id: %d, userID: %d", id, userID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // AdminPinTopic 管理员置顶/取消置顶话题处理器
@@ -433,7 +434,7 @@ func AdminPinTopic(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("admin pin topic: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -441,19 +442,19 @@ func AdminPinTopic(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, id).Error; err != nil {
 		log.Printf("admin pin topic: topic not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 更新置顶状态
 	if err := database.DB.Model(&topic).UpdateColumn("is_pinned", req.Pinned).Error; err != nil {
 		log.Printf("admin pin topic: failed to update pin status, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "操作失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("admin pin topic: topic pin updated, id: %d, pinned: %v", id, req.Pinned)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"id":        topic.ID,
 		"is_pinned": req.Pinned,
 	})
@@ -465,7 +466,7 @@ func UserPinTopic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("user pin topic: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -476,14 +477,14 @@ func UserPinTopic(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, id).Error; err != nil {
 		log.Printf("user pin topic: topic not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 验证权限：仅作者可以操作
 	if topic.UserID != userID {
 		log.Printf("user pin topic: permission denied, topicID: %d, userID: %d", id, userID)
-		utils.Error(w, 403, "无权限操作")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -493,19 +494,19 @@ func UserPinTopic(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("user pin topic: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 更新作者置顶状态
 	if err := database.DB.Model(&topic).UpdateColumn("is_user_pinned", req.Pinned).Error; err != nil {
 		log.Printf("user pin topic: failed to update user pin status, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "操作失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("user pin topic: topic user pin updated, id: %d, is_user_pinned: %v", id, req.Pinned)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"id":             topic.ID,
 		"is_user_pinned": req.Pinned,
 	})

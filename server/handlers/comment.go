@@ -3,6 +3,7 @@ package handlers
 import (
 	"bbsgo/antispam"
 	"bbsgo/database"
+	"bbsgo/errors"
 	"bbsgo/middleware"
 	"bbsgo/models"
 	"bbsgo/services"
@@ -53,7 +54,7 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		Order("is_pinned DESC, created_at ASC").
 		Offset(offset).Limit(pageSize).Find(&comments).Error; err != nil {
 		log.Printf("get comments: failed to query comments, topicID: %d, error: %v", topicID, err)
-		utils.Error(w, 500, "获取评论失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -120,7 +121,7 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"list":      response,
 		"total":     total,
 		"page":      page,
@@ -135,14 +136,14 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("create comment: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
 	// 检查是否允许评论
 	if !utils.GetConfigBool("allow_comment", true) {
 		log.Printf("create comment: comment disabled")
-		utils.Error(w, 400, "评论功能已关闭")
+		errors.Error(w, errors.CodeCommentDisabled, "")
 		return
 	}
 
@@ -156,14 +157,14 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create comment: failed to decode request body, topicID: %d, error: %v", topicID, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 验证内容
 	if req.Content == "" {
 		log.Printf("create comment: content is empty, topicID: %d", topicID)
-		utils.Error(w, 400, "请填写内容")
+		errors.Error(w, errors.CodeIncompleteInfo, "")
 		return
 	}
 
@@ -171,14 +172,14 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, topicID).Error; err != nil {
 		log.Printf("create comment: topic not found, topicID: %d, error: %v", topicID, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 检查话题是否允许评论
 	if topic.IsLocked || !topic.AllowComment {
 		log.Printf("create comment: topic is locked or not allowing comments, topicID: %d", topicID)
-		utils.Error(w, 400, "该话题已关闭评论")
+		errors.Error(w, errors.CodeCommentDisabled, "")
 		return
 	}
 
@@ -187,7 +188,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	checkResult := antispamMiddleware.CheckCommentCreate(userID, req.Content)
 	if !checkResult.Allowed {
 		log.Printf("create comment: antispam check failed, userID: %d, reason: %s", userID, checkResult.Reason)
-		utils.Error(w, 400, checkResult.Reason)
+		errors.Error(w, errors.CodeSensitiveContent, "")
 		return
 	}
 
@@ -201,7 +202,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Create(&comment).Error; err != nil {
 		log.Printf("create comment: failed to create comment, topicID: %d, userID: %d, error: %v", topicID, userID, err)
-		utils.Error(w, 500, "发布失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -233,7 +234,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("create comment: comment created successfully, id: %d, topicID: %d, userID: %d", comment.ID, topicID, userID)
-	utils.Success(w, comment)
+	errors.Success(w, comment)
 
 	// 检查并授予勋章
 	go commentBadgeService.CheckAndAwardBadges(userID)
@@ -246,7 +247,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("update comment: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -257,14 +258,14 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	var comment models.Comment
 	if err := database.DB.First(&comment, id).Error; err != nil {
 		log.Printf("update comment: comment not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "评论不存在")
+		errors.Error(w, errors.CodeCommentNotFound, "")
 		return
 	}
 
 	// 验证权限：仅作者可以更新
 	if comment.UserID != userID {
 		log.Printf("update comment: permission denied, commentID: %d, userID: %d", id, userID)
-		utils.Error(w, 403, "无权限编辑")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -272,7 +273,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		log.Printf("update comment: failed to decode request body, id: %d, error: %v", id, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -288,7 +289,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// 执行更新
 	if err := database.DB.Model(&comment).Updates(updates).Error; err != nil {
 		log.Printf("update comment: failed to update comment, id: %d, userID: %d, error: %v", id, userID, err)
-		utils.Error(w, 500, "更新失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -298,7 +299,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("update comment: comment updated successfully, id: %d, userID: %d", id, userID)
-	utils.Success(w, comment)
+	errors.Success(w, comment)
 }
 
 // DeleteComment 删除评论处理器
@@ -308,7 +309,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("delete comment: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -319,7 +320,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	var comment models.Comment
 	if err := database.DB.First(&comment, id).Error; err != nil {
 		log.Printf("delete comment: comment not found, id: %d, error: %v", id, err)
-		utils.Error(w, 404, "评论不存在")
+		errors.Error(w, errors.CodeCommentNotFound, "")
 		return
 	}
 
@@ -327,14 +328,14 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
 		log.Printf("delete comment: user not found, userID: %d, error: %v", userID, err)
-		utils.Error(w, 404, "用户不存在")
+		errors.Error(w, errors.CodeUserNotFound, "")
 		return
 	}
 
 	// 验证权限：作者或管理员(role>=1)可以删除
 	if comment.UserID != userID && user.Role < 1 {
 		log.Printf("delete comment: permission denied, commentID: %d, userID: %d", id, userID)
-		utils.Error(w, 403, "无权限删除")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -347,7 +348,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// 物理删除评论
 	if err := database.DB.Unscoped().Delete(&comment).Error; err != nil {
 		log.Printf("delete comment: failed to delete comment, id: %d, error: %v", id, err)
-		utils.Error(w, 500, "删除失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -359,7 +360,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("delete comment: comment deleted successfully, id: %d, userID: %d", id, userID)
-	utils.Success(w, nil)
+	errors.Success(w, nil)
 }
 
 // PinComment 置顶/取消置顶评论处理器
@@ -369,7 +370,7 @@ func PinComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("pin comment: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -381,14 +382,14 @@ func PinComment(w http.ResponseWriter, r *http.Request) {
 	var comment models.Comment
 	if err := database.DB.First(&comment, commentID).Error; err != nil {
 		log.Printf("pin comment: comment not found, commentID: %d, error: %v", commentID, err)
-		utils.Error(w, 404, "评论不存在")
+		errors.Error(w, errors.CodeCommentNotFound, "")
 		return
 	}
 
 	// 验证评论属于指定话题
 	if comment.TopicID != uint(topicID) {
 		log.Printf("pin comment: comment does not belong to topic, commentID: %d, topicID: %d", commentID, topicID)
-		utils.Error(w, 400, "评论不属于该话题")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
@@ -396,14 +397,14 @@ func PinComment(w http.ResponseWriter, r *http.Request) {
 	var topic models.Topic
 	if err := database.DB.First(&topic, topicID).Error; err != nil {
 		log.Printf("pin comment: topic not found, topicID: %d, error: %v", topicID, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	// 仅帖子作者可以置顶评论
 	if topic.UserID != userID {
 		log.Printf("pin comment: permission denied, topicID: %d, userID: %d", topicID, userID)
-		utils.Error(w, 403, "无权限操作")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -413,19 +414,19 @@ func PinComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("pin comment: failed to decode request body, commentID: %d, error: %v", commentID, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	// 更新置顶状态
 	if err := database.DB.Model(&comment).UpdateColumn("is_pinned", req.Pinned).Error; err != nil {
 		log.Printf("pin comment: failed to update pin status, commentID: %d, error: %v", commentID, err)
-		utils.Error(w, 500, "操作失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	log.Printf("pin comment: comment pin updated, commentID: %d, pinned: %v", commentID, req.Pinned)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"id":        comment.ID,
 		"is_pinned": req.Pinned,
 	})
@@ -437,7 +438,7 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		log.Printf("best comment: user not authenticated")
-		utils.Error(w, 401, "未认证")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
 		return
 	}
 
@@ -448,26 +449,26 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 	var comment models.Comment
 	if err := database.DB.First(&comment, commentID).Error; err != nil {
 		log.Printf("best comment: comment not found, commentID: %d, error: %v", commentID, err)
-		utils.Error(w, 404, "评论不存在")
+		errors.Error(w, errors.CodeCommentNotFound, "")
 		return
 	}
 
 	if comment.TopicID != uint(topicID) {
 		log.Printf("best comment: comment does not belong to topic, commentID: %d, topicID: %d", commentID, topicID)
-		utils.Error(w, 400, "评论不属于该话题")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	var topic models.Topic
 	if err := database.DB.First(&topic, topicID).Error; err != nil {
 		log.Printf("best comment: topic not found, topicID: %d, error: %v", topicID, err)
-		utils.Error(w, 404, "话题不存在")
+		errors.Error(w, errors.CodeTopicNotFound, "")
 		return
 	}
 
 	if topic.UserID != userID {
 		log.Printf("best comment: permission denied, topicID: %d, userID: %d", topicID, userID)
-		utils.Error(w, 403, "无权限操作")
+		errors.Error(w, errors.CodeNoPermission, "")
 		return
 	}
 
@@ -476,14 +477,14 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("best comment: failed to decode request body, commentID: %d, error: %v", commentID, err)
-		utils.Error(w, 400, "无效的请求参数")
+		errors.Error(w, errors.CodeInvalidParams, "")
 		return
 	}
 
 	if req.Best {
 		if comment.UserID == userID {
 			log.Printf("best comment: cannot mark own comment as best, userID: %d", userID)
-			utils.Error(w, 400, "不能将自己的评论设为最佳评论")
+			errors.Error(w, errors.CodeNoPermission, "")
 			return
 		}
 
@@ -491,7 +492,7 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 		if err := database.DB.Where("topic_id = ? AND is_best = ? AND id != ?", topicID, true, commentID).First(&existingBest).Error; err == nil {
 			if err := database.DB.Model(&existingBest).UpdateColumn("is_best", false).Error; err != nil {
 				log.Printf("best comment: failed to clear previous best comment, commentID: %d, error: %v", existingBest.ID, err)
-				utils.Error(w, 500, "操作失败")
+				errors.Error(w, errors.CodeServerInternal, "")
 				return
 			}
 			log.Printf("best comment: cleared previous best comment, commentID: %d", existingBest.ID)
@@ -500,7 +501,7 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.DB.Model(&comment).UpdateColumn("is_best", req.Best).Error; err != nil {
 		log.Printf("best comment: failed to update best status, commentID: %d, error: %v", commentID, err)
-		utils.Error(w, 500, "操作失败")
+		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
@@ -526,7 +527,7 @@ func BestComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("best comment: comment best updated, commentID: %d, is_best: %v", commentID, req.Best)
-	utils.Success(w, map[string]interface{}{
+	errors.Success(w, map[string]interface{}{
 		"id":      comment.ID,
 		"is_best": req.Best,
 	})

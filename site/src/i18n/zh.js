@@ -40,7 +40,8 @@ export default {
     myMessages: '我的消息',
     systemNotifications: '系统通知',
     myFavorites: '我的收藏',
-    logout: '退出登录'
+    logout: '退出登录',
+    allForums: '全部'
   },
   home: {
     latestTopics: '最新帖子',
@@ -257,14 +258,6 @@ export default {
     poor: '信誉较差',
     veryPoor: '信誉很差',
     banned: '已被禁言'
-  },
-  nav: {
-    personalCenter: '个人中心',
-    myMessages: '我的消息',
-    systemNotifications: '系统通知',
-    myFavorites: '我的收藏',
-    logout: '退出登录',
-    allForums: '全部'
   },
   login: {
     title: '登录',
@@ -556,5 +549,61 @@ export default {
     submitVote: '提交投票',
     submitting: '提交中...',
     voted: '您已投票'
+  },
+  errors: {
+    // 1xxx - 认证注册类
+    registerDisabled: '注册功能已关闭',
+    invalidParams: '无效的请求参数',
+    incompleteInfo: '请填写完整信息',
+    usernameExists: '用户名已存在',
+    emailExists: '邮箱已被注册',
+    passwordHashFailed: '密码加密失败',
+    tokenGenerateFailed: '生成令牌失败',
+    usernameOrPassword: '用户名或密码错误',
+    invalidEmail: '邮箱格式错误',
+    verifyCodeError: '验证码错误',
+    verifyCodeExpired: '验证码已过期',
+    emailNotRegistered: '邮箱未注册',
+    // 2xxx - 用户相关类
+    userNotFound: '用户不存在',
+    noPermission: '无权限操作',
+    cannotFollowSelf: '无法关注自己',
+    alreadyFollowed: '已经关注过',
+    notFollowed: '尚未关注该用户',
+    creditsInsufficient: '积分不足',
+    reputationLow: '信誉分过低',
+    // 3xxx - 内容操作类
+    topicNotFound: '话题不存在',
+    commentNotFound: '评论不存在',
+    forumNotFound: '版块不存在',
+    tagNotFound: '标签不存在',
+    favoriteNotFound: '收藏不存在',
+    messageNotFound: '消息不存在',
+    notificationNotFound: '通知不存在',
+    pollNotFound: '投票不存在',
+    draftNotFound: '草稿不存在',
+    // 4xxx - 业务限制类
+    postDisabled: '发帖功能已关闭',
+    commentDisabled: '评论功能已关闭',
+    postIntervalFast: '发帖间隔过快',
+    sensitiveContent: '内容包含敏感词',
+    titleTooLong: '标题长度超出限制',
+    contentTooLong: '内容长度超出限制',
+    pollOptionsFew: '投票选项数量不足',
+    pollEnded: '投票已结束',
+    alreadyVoted: '已投过票',
+    voteExceedMax: '超出投票选项限制',
+    fileSizeExceeded: '文件大小超出限制',
+    fileTypeUnsupported: '文件类型不支持',
+    imageSizeExceeded: '图片尺寸超出限制',
+    // 5xxx - 系统错误类
+    serverInternal: '服务器内部错误',
+    databaseError: '数据库操作失败',
+    uploadFailed: '文件上传失败',
+    cacheError: '缓存操作失败',
+    thirdPartyError: '第三方服务调用失败',
+    // 通用
+    unknown: '未知错误',
+    networkError: '网络错误'
   }
 }
