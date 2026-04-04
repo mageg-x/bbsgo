@@ -46,6 +46,7 @@ export default {
   home: {
     latestTopics: 'Latest Topics',
     hotTopics: 'Hot Topics',
+    hotTags: 'Hot Tags',
     essenceTopics: 'Essence Topics',
     signIn: 'Check In',
     credits: 'Credits',

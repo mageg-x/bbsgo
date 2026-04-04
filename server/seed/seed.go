@@ -2,6 +2,7 @@ package seed
 
 import (
 	"bbsgo/database"
+	"bbsgo/models"
 	"bbsgo/utils"
 	"log"
 )
@@ -12,6 +13,7 @@ func seedDataZh() {
 	seedTagsZh()
 	seedUsersZh()
 	seedTopicsZh()
+	seedTopicTagsZh()
 }
 
 func seedDataEn() {
@@ -20,6 +22,7 @@ func seedDataEn() {
 	seedTagsEn()
 	seedUsersEn()
 	seedTopicsEn()
+	seedTopicTagsEn()
 }
 
 func checkAndInsert(table string, count *int64, insertFunc func()) {
@@ -210,18 +213,18 @@ func seedTagsEn() {
 			Description string
 			SortOrder   int
 		}{
-			{"Chill Mode", "😌", "Share slow living, reject anxiety", 1},
-			{"Self Love", "💖", "Ways to be good to yourself", 2},
-			{"Real Life", "🫠", "Real, imperfect life moments", 3},
-			{"Life Hack", "⚡", "Shortcuts, efficient slacking", 4},
-			{"Vent Out", "😤", "Externalize stress instead of internalizing", 5},
-			{"Little Joy", "✨", "Small but certain moments of happiness", 6},
-			{"My Voice", "🗣️", "Says what I wanted to say", 7},
-			{"Advice Needed", "❓", "Life advice, shopping tips", 8},
-			{"So Funny", "😂", "Funny posts, comments, images", 9},
-			{"Mind Blown", "🔥", "Unexpected pleasant surprises", 10},
-			{"Touched", "💔", "Moved, stabbed, hit by feelings", 11},
-			{"How Is It?", "🤔", "Rate my work, show results", 12},
+			{"Chill Vibes", "😌", "Share slow living, reject anxiety", 1},
+			{"Love Yourself", "💖", "Self-care and ways to be kind to yourself", 2},
+			{"Real Life", "🫠", "Authentic, imperfect life fragments", 3},
+			{"Hack It", "⚡", "Find shortcuts, efficient slacking, anti-hustle", 4},
+			{"Externalize", "😤", "Instead of internalizing, externalize", 5},
+			{"Small Wins", "✨", "Tiny but certain happy moments", 6},
+			{"Mouthpiece", "🗣️", "Said what I wanted to but couldn't", 7},
+			{"Advice/Avoid", "❓", "Life help, consumer traps", 8},
+			{"LOL", "😂", "Funny jokes, hot takes, memes", 9},
+			{"Plot Twist", "🔥", "Facepalm moments, unexpected wins", 10},
+			{"Emotional", "💔", "Touched, heartbroken, relatable moments", 11},
+			{"Rate This", "🤔", "Ask for evaluation, show achievements", 12},
 		}
 		for _, t := range tags {
 			database.DB.Exec("INSERT INTO tags (name, icon, description, sort_order, usage_count, is_official, is_banned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
@@ -250,16 +253,16 @@ func seedUsersZh() {
 			Email    string
 			Nickname string
 		}{
-			{10001, "testuser1", "test1@example.com", "测试用户1"},
-			{10002, "testuser2", "test2@example.com", "测试用户2"},
-			{10003, "testuser3", "test3@example.com", "测试用户3"},
-			{10004, "testuser4", "test4@example.com", "测试用户4"},
-			{10005, "testuser5", "test5@example.com", "测试用户5"},
-			{10006, "testuser6", "test6@example.com", "测试用户6"},
-			{10007, "testuser7", "test7@example.com", "测试用户7"},
-			{10008, "testuser8", "test8@example.com", "测试用户8"},
-			{10009, "testuser9", "test9@example.com", "测试用户9"},
-			{10010, "testuser10", "test10@example.com", "测试用户10"},
+			{10001, "yuexia", "yuexia@example.com", "月下独酌"},
+			{10002, "xingchen", "xingchen@example.com", "星辰大海"},
+			{10003, "yulan", "yulan@example.com", "雨后玉兰"},
+			{10004, "moli", "moli@example.com", "茉莉清茶"},
+			{10005, "yunqi", "yunqi@example.com", "云起之时"},
+			{10006, "fengqing", "fengqing@example.com", "风轻云淡"},
+			{10007, "huakai", "huakai@example.com", "花开半夏"},
+			{10008, "xueying", "xueying@example.com", "雪映梅花"},
+			{10009, "mengxing", "mengxing@example.com", "梦醒时分"},
+			{10010, "chenguang", "chenguang@example.com", "晨曦微露"},
 		}
 		for _, u := range users {
 			hashedPassword, _ := utils.HashPassword("123456")
@@ -288,16 +291,16 @@ func seedUsersEn() {
 			Email    string
 			Nickname string
 		}{
-			{10001, "testuser1", "test1@example.com", "Test User 1"},
-			{10002, "testuser2", "test2@example.com", "Test User 2"},
-			{10003, "testuser3", "test3@example.com", "Test User 3"},
-			{10004, "testuser4", "test4@example.com", "Test User 4"},
-			{10005, "testuser5", "test5@example.com", "Test User 5"},
-			{10006, "testuser6", "test6@example.com", "Test User 6"},
-			{10007, "testuser7", "test7@example.com", "Test User 7"},
-			{10008, "testuser8", "test8@example.com", "Test User 8"},
-			{10009, "testuser9", "test9@example.com", "Test User 9"},
-			{10010, "testuser10", "test10@example.com", "Test User 10"},
+			{10001, "alex", "alex@example.com", "Alex Chen"},
+			{10002, "emma", "emma@example.com", "Emma Wang"},
+			{10003, "mike", "mike@example.com", "Mike Li"},
+			{10004, "sarah", "sarah@example.com", "Sarah Zhang"},
+			{10005, "david", "david@example.com", "David Liu"},
+			{10006, "jessica", "jessica@example.com", "Jessica Wu"},
+			{10007, "tom", "tom@example.com", "Tom Chen"},
+			{10008, "amy", "amy@example.com", "Amy Huang"},
+			{10009, "developer", "dev@example.com", "Code Ninja"},
+			{10010, "dreamer", "dream@example.com", "Dream Chaser"},
 		}
 		for _, u := range users {
 			hashedPassword, _ := utils.HashPassword("123456")
@@ -325,16 +328,24 @@ func seedTopicsZh() {
 			ReplyCount int
 			ViewCount  int
 		}{
-			{"bbs-go v3.5.0 发布，升级 go1.18", "文档地址：https://docs.bbs-go.com/\n官网交流：https://mlog.club\n问题反馈：https://mlog.club/topic/node/3\n\n本次更新内容：\n1. 升级 Go 1.18 版本\n2. 优化数据库查询性能\n3. 修复已知 bug\n4. 新增配置管理功能", 10001, 2, 12, 8, 352},
-			{"Vue3 + TypeScript 项目实践分享", "最近用 Vue3 + TypeScript 做了一个项目，分享一些实践经验：\n\n1. 组合式 API 真的很香，逻辑复用更方便了\n2. TypeScript 的类型推导需要好好配置\n3. Pinia 比 Vuex 更简洁好用\n\n有问题的朋友欢迎留言讨论~", 10002, 2, 45, 18, 892},
-			{"今天天气不错，适合摸鱼", "周末到了，阳光明媚，正是摸鱼好时节。大家最近都在看什么书？有什么好剧推荐吗？\n\n我最近在看《三体》，真的很精彩！强烈推荐给还没看过的朋友。", 10003, 7, 32, 21, 687},
-			{"求助：MySQL 慢查询优化", "公司有个 MySQL 表数据量大概 500 万，查询越来越慢了。\n\n表结构大概是：\n- id (主键)\n- user_id (索引)\n- created_at (索引)\n- content (text)\n\n查询语句：SELECT * FROM table WHERE user_id = ? ORDER BY created_at DESC LIMIT 20\n\n请问有什么优化建议吗？", 10004, 3, 8, 12, 234},
-			{"分享一些 Linux 常用命令", "整理了一些常用的 Linux 命令，希望对大家有帮助：\n\n查看端口占用情况：\nnetstat -tunlp | grep 端口号\n\n通过 ssh 将远程端口映射到本地端口：\nssh -L 13306:127.0.0.1:3306 用户名@远程地址 -N\n\n这样远程服务器就不需要开放需要的端口到公网了，更安全。", 10005, 5, 18, 5, 221},
-			{"C++ 程序返回 value 3221226356 求教！", "return value 3221226356 求教求教！\n\n#include <iostream>\nusing namespace std;\nint main() {\n    int n;\n    double *p=new double[n];\n    cin>>n;\n    for(int i=0;i<n;i++) { cin>>p[i]; }\n    for(int i=0;i<n;i++) { cout<<p[i]<<\" \"; }\n    return 0;\n}\n\n程序运行时出现这个错误，请问是什么原因？", 10006, 3, 3, 7, 126},
-			{"分享一张今天拍的美照", "今天去公园玩了，随手拍了一张照片，分享给大家~\n\n[图片]\n\n摄影器材：Sony A7M3\n参数：f/2.8, 1/500s, ISO100", 10007, 8, 156, 43, 2341},
-			{"网站有个 BUG 反馈", "在使用网站时发现一个问题：\n\n当我在移动端浏览帖子时，点击回复按钮后键盘会遮挡输入框，需要手动收起键盘才能看到输入内容。\n\n浏览器：Safari\n系统：iOS 16\n设备：iPhone 13 Pro\n\n希望能修复一下，谢谢！", 10008, 8, 5, 3, 89},
-			{"推荐一个很好用的开源项目", "最近发现一个很棒的开源项目：\n\n项目名称：VSCode\nGitHub 地址：https://github.com/microsoft/vscode\n\n功能强大，插件生态丰富，支持几乎所有编程语言。强烈推荐给各位开发者！\n\n大家还有什么好用的工具欢迎分享~", 10009, 5, 67, 29, 1523},
-			{"2024 年前端技术趋势预测", "随着 AI 的快速发展，前端领域也在不断变化。以下是我对 2024 年前端技术趋势的一些预测：\n\n1. AI 辅助开发将成为标配\n2. Server Components 会更加流行\n3. TypeScript 使用率继续上升\n4. Rust 在前端工具链中的应用会更广泛\n5. Web Components 可能会迎来第二春\n\n大家怎么看？欢迎讨论！", 10010, 4, 89, 32, 1523},
+			{"今天终于躺平了，感觉人生都升华了", "终于下定决心不卷了！早上睡到自然醒，慢悠悠地吃了个早餐，晒晒太阳看看书。\n\n![躺平日常](https://picsum.photos/seed/1/800/450)\n\n以前总觉得要努力要奋斗，现在才发现，允许自己不那么完美，也是一种自我关怀。\n\n推荐一个超治愈的视频：https://www.youtube.com/watch?v=dQw4w9WgXcQ\n\n今天也是爱自己的一天！💖", 10001, 1, 234, 45, 3241},
+			{"分享我的极简护肤流程，对自己好一点", "以前总买一堆护肤品，现在简化了，皮肤反而更好了！\n\n![护肤日常](https://picsum.photos/seed/2/800/450)\n\n晨间流程：\n1. 温水洁面\n2. 爽肤水\n3. 精华\n4. 防晒\n\n晚间流程：\n1. 卸妆+洁面\n2. 爽肤水\n3. 精华\n4. 面霜\n\n最重要的是：多喝水，早睡！", 10002, 1, 189, 32, 2891},
+			{"记录一下今天的小确幸", "今天下班路上看到了超美的夕阳！\n\n![夕阳](https://picsum.photos/seed/3/800/450)\n\n生活中的小确幸：\n- 买到了喜欢的奶茶\n- 地铁刚好赶上\n- 今天的饭菜很好吃\n- 同事夸我今天好看\n- 回家路上看到了好看的云\n\n这些小小的瞬间，组成了我们的生活呀！", 10001, 1, 178, 29, 2456},
+			{"今天摸鱼了一天，太爽了", "今天工作效率特别低，索性就摸鱼了！\n\n![摸鱼](https://picsum.photos/seed/4/800/450)\n\n摸鱼清单：\n- 刷了半小时小红书\n- 看了几个短视频\n- 跟同事聊了八卦\n- 喝了一杯咖啡\n- 摸了摸鱼（真的在看鱼缸里的鱼）\n\n偶尔摸鱼，心情真的会好很多！", 10003, 1, 201, 34, 2876},
+			{"今天把锅甩出去了，心情舒畅", "以前总怕得罪人，什么锅都自己背。今天终于学会了：这锅我不背！\n\n![甩锅](https://picsum.photos/seed/5/800/450)\n\n心得：\n1. 明确自己的职责范围\n2. 不是自己的问题，礼貌但坚定地拒绝\n3. 提供解决方案，但不替别人承担责任\n\n与其内耗自己，不如外耗别人！", 10004, 2, 56, 23, 1234},
+			{"今天发生了一件超好笑的事", "今天在地铁上，有个小朋友指着我的头发说：阿姨，你的头发好像棉花糖！\n\n![搞笑](https://picsum.photos/seed/6/800/450)\n\n我：\n\n然后旁边的人都笑了，小朋友还特别认真地问我能不能吃一口。\n\n小朋友的脑洞真的太大了，笑哭！😂", 10005, 2, 89, 34, 2134},
+			{"今天看了一个超感人的视频，破防了", "今天刷到一个视频，是关于爷爷奶奶的爱情故事，看得我眼泪直流。\n\n![感动](https://picsum.photos/seed/7/800/450)\n\n视频里，爷爷得了老年痴呆，忘了很多事，但还记得奶奶爱吃的糖。\n\n这种长久的陪伴，真的太好哭了。\n\n珍惜眼前人啊！", 10006, 3, 123, 45, 3456},
+			{"之前说再也不买了，结果又真香了", "上个月还在说：今年再也不买衣服了！结果这周就...\n\n![真香](https://picsum.photos/seed/8/800/450)\n\n新衣服真的太好看了！忍不住就下单了。\n\n打脸来得太快就像龙卷风。\n\n没关系，钱没有消失，它只是换了一种方式陪在我身边！", 10007, 3, 98, 38, 2891},
+			{"求大家帮我看看，这套穿搭什么水平？", "今天穿了新买的衣服，想让大家帮我看看怎么样！\n\n![穿搭](https://picsum.photos/seed/9/800/450)\n\n上衣：新买的卫衣\n裤子：牛仔裤\n鞋子：小白鞋\n\n大家觉得可以打几分？有什么改进建议吗？", 10008, 4, 156, 52, 3210},
+			{"分享一下我的省钱小妙招", "作为一个精致的穷鬼，我太有发言权了！\n\n![省钱](https://picsum.photos/seed/10/800/450)\n\n省钱小妙招：\n1. 不买就是省\n2. 买之前先问自己：真的需要吗？\n3. 延迟满足，放购物车冷静几天\n4. 找替代品\n5. 利用优惠券和活动\n\n钱要花在刀刃上！", 10009, 4, 189, 67, 4521},
+			{"我的互联网嘴替找到了！", "今天刷到一条评论，说得太对了！完全就是我想说但说不出来的话！\n\n![嘴替](https://picsum.photos/seed/11/800/450)\n\n这条评论简直是在我的脑子里装了监控。\n\n终于有人把我想说的话说出来了！", 10010, 5, 234, 78, 5678},
+			{"记录真实的一天，不完美但很真实", "今天过得有点乱糟糟的，但想记录一下真实的生活。\n\n![真实日常](https://picsum.photos/seed/12/800/450)\n\n- 早上起晚了，差点迟到\n- 中午的外卖有点难吃\n- 工作上犯了个小错误\n- 但下班路上买了好吃的\n- 晚上追了喜欢的剧\n\n生活就是这样，不完美但很真实呀！", 10001, 5, 178, 56, 3456},
+			{"分享一下今天拍的照片", "今天天气不错，拍了几张照片！\n\n![照片](https://picsum.photos/seed/13/800/450)\n\n第一张：路边的小花\n第二张：天上的云\n第三张：街角的咖啡店\n第四张：夕阳\n\n拍照技术一般，但记录生活很开心！", 10002, 6, 145, 43, 2341},
+			{"求推荐！最近有什么好看的剧吗？", "最近剧荒了，大家有什么推荐吗？\n\n![追剧](https://picsum.photos/seed/14/800/450)\n\n我喜欢的类型：\n- 悬疑推理\n- 治愈系\n- 搞笑轻松\n- 古装剧\n\n大家有什么好看的剧推荐吗？电影也行！", 10003, 6, 123, 38, 2156},
+			{"社区新手指南，欢迎新朋友！", "欢迎加入我们的社区！给新朋友们介绍一下怎么玩～\n\n![新手指南](https://picsum.photos/seed/15/800/450)\n\n## 社区功能\n1. 发帖分享你的生活\n2. 给喜欢的帖子点赞评论\n3. 关注你喜欢的用户\n4. 给帖子打标签，方便分类\n\n有任何问题都可以在评论区问我哦！", 10000, 7, 89, 23, 1876},
+			{"社区公告：请大家友善发言哦", "为了维护良好的社区氛围，请大家注意：\n\n![公告](https://picsum.photos/seed/16/800/450)\n\n## 社区规范\n1. 友善发言，尊重他人\n2. 不发布广告和垃圾信息\n3. 不传播不实信息\n4. 保护他人隐私\n\n希望大家一起营造一个温暖友好的社区！", 10000, 7, 156, 45, 2567},
+			{"今天摸鱼的时候写了首小诗", "今天摸鱼的时候灵感来了，写了首小诗～\n\n![写诗](https://picsum.photos/seed/17/800/450)\n\n《摸鱼之歌》\n\n工作堆如山，\n我心已飘然。\n鼠标轻轻点，\n摸鱼乐无边。\n\n哈哈，写得不好，大家见笑了！", 10004, 1, 167, 38, 2654},
+			{"分享我的摸鱼高效摆烂指南", "作为一个资深摸鱼选手，我来分享一下如何高效摆烂！\n\n![摆烂](https://picsum.photos/seed/18/800/450)\n\n高效摆烂指南：\n1. 先做完必须做的事\n2. 剩下的时间，想干嘛干嘛\n3. 不要有负罪感\n4. 摆烂也是为了更好地工作\n\n适当摆烂，有益身心健康！", 10005, 1, 145, 32, 2345},
 		}
 		for i, t := range topics {
 			database.DB.Exec(`INSERT INTO topics (id, title, content, user_id, forum_id, like_count, reply_count, view_count, created_at, updated_at)
@@ -342,7 +353,7 @@ func seedTopicsZh() {
 				10000+i, t.Title, t.Content, t.UserID, t.ForumID, t.LikeCount, t.ReplyCount, t.ViewCount)
 		}
 		log.Println("[seed] topics created (zh)")
-		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('topics', 10010)")
+		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('topics', 10019)")
 		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('comments', 9999)")
 	})
 }
@@ -360,16 +371,24 @@ func seedTopicsEn() {
 			ReplyCount int
 			ViewCount  int
 		}{
-			{"bbs-go v3.5.0 Released, upgraded to go1.18", "Docs: https://docs.bbs-go.com/\nForum: https://mlog.club\nFeedback: https://mlog.club/topic/node/3\n\nChangelog:\n1. Upgraded to Go 1.18\n2. Optimized database query performance\n3. Fixed known bugs\n4. Added configuration management", 10001, 2, 12, 8, 352},
-			{"Vue3 + TypeScript Project Practice", "Recently built a project with Vue3 + TypeScript, sharing some experiences:\n\n1. Composition API is great, logic reuse is more convenient\n2. TypeScript type inference needs proper configuration\n3. Pinia is simpler and better than Vuex\n\nFeel free to leave comments if you have questions!", 10002, 2, 45, 18, 892},
-			{"Nice weather today, perfect for slacking off", "It's the weekend, sunny and bright, perfect time to slack off. What books are you reading lately? Any good shows to recommend?\n\nI'm reading \"The Three-Body Problem\" recently, it's really exciting! Highly recommend to those who haven't read it.", 10003, 7, 32, 21, 687},
-			{"Help: MySQL Slow Query Optimization", "Our MySQL table has about 5 million rows and queries are getting slower.\n\nTable structure:\n- id (primary key)\n- user_id (index)\n- created_at (index)\n- content (text)\n\nQuery: SELECT * FROM table WHERE user_id = ? ORDER BY created_at DESC LIMIT 20\n\nAny optimization suggestions?", 10004, 3, 8, 12, 234},
-			{"Sharing Some Common Linux Commands", "Compiled some common Linux commands, hope it helps:\n\nCheck port usage:\nnetstat -tunlp | grep port\n\nMap remote port to local via ssh:\nssh -L 13306:127.0.0.1:3306 user@remote -N\n\nThis way the remote server doesn't need to expose ports to the internet, more secure.", 10005, 5, 18, 5, 221},
-			{"C++ Program Returns value 3221226356 Help!", "return value 3221226356 please help!\n\n#include <iostream>\nusing namespace std;\nint main() {\n    int n;\n    double *p=new double[n];\n    cin>>n;\n    for(int i=0;i<n;i++) { cin>>p[i]; }\n    for(int i=0;i<n;i++) { cout<<p[i]<<\" \"; }\n    return 0;\n}\n\nWhat causes this error?", 10006, 3, 3, 7, 126},
-			{"Sharing a beautiful photo I took today", "Went to the park today, took a photo, sharing with everyone~\n\n[Image]\n\nCamera: Sony A7M3\nSettings: f/2.8, 1/500s, ISO100", 10007, 8, 156, 43, 2341},
-			{"Website BUG Feedback", "Found an issue when using the website:\n\nWhen browsing posts on mobile, clicking the reply button the keyboard blocks the input box, need to manually close the keyboard to see the content.\n\nBrowser: Safari\nOS: iOS 16\nDevice: iPhone 13 Pro\n\nHope it can be fixed, thanks!", 10008, 8, 5, 3, 89},
-			{"Recommending a Great Open Source Project", "Found a great open source project recently:\n\nProject Name: VSCode\nGitHub: https://github.com/microsoft/vscode\n\nPowerful, rich plugin ecosystem, supports almost all programming languages. Highly recommended for developers!\n\nWhat other useful tools do you recommend?", 10009, 5, 67, 29, 1523},
-			{"2024 Frontend Technology Trends", "With the rapid development of AI, the frontend landscape is constantly changing. Here are my predictions for 2024 frontend trends:\n\n1. AI-assisted development will become standard\n2. Server Components will become more popular\n3. TypeScript usage will continue to rise\n4. Rust will be more widely used in frontend toolchains\n5. Web Components might see a resurgence\n\nWhat do you think? Feel free to discuss!", 10010, 4, 89, 32, 1523},
+			{"Finally decided to stop hustling, life feels elevated", "Finally made the decision to stop the grind! Woke up naturally, had a slow breakfast, sunbathed and read.\n\n![Chill Day](https://picsum.photos/seed/18/800/450)\n\nUsed to think I had to strive and struggle, now I realize that allowing yourself to be imperfect is also self-care.\n\nRecommend a super healing video: https://www.youtube.com/watch?v=dQw4w9WgXcQ\n\nAnother day of loving myself! 💖", 10001, 1, 234, 45, 3241},
+			{"Sharing my minimal skincare routine, be kind to yourself", "Used to buy so many products, now simplified and my skin got better!\n\n![Skincare](https://picsum.photos/seed/19/800/450)\n\nMorning routine:\n1. Warm water cleanse\n2. Toner\n3. Serum\n4. Sunscreen\n\nEvening routine:\n1. Cleanse + double cleanse\n2. Toner\n3. Serum\n4. Moisturizer\n\nMost importantly: drink water, sleep early!", 10002, 1, 189, 32, 2891},
+			{"Documenting my small win today", "Saw the most beautiful sunset on my way home from work!\n\n![Sunset](https://picsum.photos/seed/20/800/450)\n\nSmall wins in life:\n- Got my favorite drink\n- Just caught the subway\n- Food was delicious today\n- Colleague said I looked nice\n- Saw pretty clouds on the way home\n\nThese little moments make up our lives!", 10001, 1, 178, 29, 2456},
+			{"Slacked off all day, it was awesome", "Was super unproductive today, so I just slacked off!\n\n![Slacking](https://picsum.photos/seed/21/800/450)\n\nSlack list:\n- Scrolled Instagram for half an hour\n- Watched some short videos\n- Gossiped with coworkers\n- Had a coffee\n- Looked at fish in the fish tank\n\nSlacking occasionally really improves your mood!", 10003, 1, 201, 34, 2876},
+			{"Successfully passed the buck today, feeling great", "Used to be afraid of offending people, took all the blame. Today I finally learned: Not my problem!\n\n![Passing the Buck](https://picsum.photos/seed/22/800/450)\n\nTakeaways:\n1. Clarify your responsibilities\n2. Politely but firmly reject what's not your problem\n3. Offer solutions but don't take responsibility for others\n\nInstead of internalizing, externalize!", 10004, 2, 56, 23, 1234},
+			{"Something super funny happened today", "On the subway today, a kid pointed at my hair and said: Auntie, your hair looks like cotton candy!\n\n![Funny](https://picsum.photos/seed/23/800/450)\n\nMe:\n\nThen everyone laughed, and the kid seriously asked if he could have a bite.\n\nKids have such big imaginations, crying laughing! 😂", 10005, 2, 89, 34, 2134},
+			{"Watched a super emotional video today, got me in my feelings", "Saw a video today about grandparents' love story, tears were flowing.\n\n![Emotional](https://picsum.photos/seed/24/800/450)\n\nIn the video, grandpa had dementia and forgot many things, but still remembered grandma's favorite candy.\n\nThis kind of long-term companionship really hits different.\n\nCherish the people in front of you!", 10006, 3, 123, 45, 3456},
+			{"Said I wouldn't buy anything, then it happened again", "Last month was still saying: No more clothes this year! Then this week...\n\n![Plot Twist](https://picsum.photos/seed/25/800/450)\n\nThe new clothes are just too pretty! Couldn't help but order.\n\nThe打脸 came so fast like a tornado.\n\nIt's okay, money didn't disappear, it just stayed with me in a different form!", 10007, 3, 98, 38, 2891},
+			{"Help me rate this outfit, what do you think?", "Wore my new clothes today, want everyone's opinion!\n\n![Outfit](https://picsum.photos/seed/26/800/450)\n\nTop: new sweatshirt\nPants: jeans\nShoes: white sneakers\n\nWhat score would you give? Any improvement suggestions?", 10008, 4, 156, 52, 3210},
+			{"Sharing my money-saving tips", "As a sophisticated broke person, I have so much to say!\n\n![Saving Money](https://picsum.photos/seed/27/800/450)\n\nMoney saving tips:\n1. Not buying is saving\n2. Ask yourself before buying: Do I really need this?\n3. Delayed gratification, leave in cart for a few days\n4. Find alternatives\n5. Use coupons and sales\n\nMoney should be spent on what matters!", 10009, 4, 189, 67, 4521},
+			{"Found my internet mouthpiece!", "Saw a comment today that was so right! Exactly what I wanted to say but couldn't!\n\n![Mouthpiece](https://picsum.photos/seed/28/800/450)\n\nThis comment was basically monitoring my brain.\n\nFinally someone said what I wanted to say!", 10010, 5, 234, 78, 5678},
+			{"Documenting a real day, imperfect but real", "Today was a bit messy, but wanted to document real life.\n\n![Real Life](https://picsum.photos/seed/29/800/450)\n\n- Woke up late, almost late\n- Lunch takeout was kinda bad\n- Made a small mistake at work\n- But got something nice on the way home\n- Binged my favorite show in the evening\n\nLife is like this, imperfect but real!", 10001, 5, 178, 56, 3456},
+			{"Sharing photos I took today", "Nice weather today, took some photos!\n\n![Photos](https://picsum.photos/seed/30/800/450)\n\nFirst: flowers by the road\nSecond: clouds in the sky\nThird: coffee shop on the corner\nFourth: sunset\n\nPhotography skills average, but documenting life is fun!", 10002, 6, 145, 43, 2341},
+			{"Recommendations! Any good shows lately?", "Running out of shows, any recommendations?\n\n![Binging](https://picsum.photos/seed/31/800/450)\n\nGenres I like:\n- Mystery thriller\n- Healing\n- Funny and light\n- Historical drama\n\nAny good show recommendations? Movies too!", 10003, 6, 123, 38, 2156},
+			{"Community Newbie Guide, welcome new friends!", "Welcome to our community! Introducing how to play for new friends～\n\n![Newbie Guide](https://picsum.photos/seed/32/800/450)\n\n## Community Features\n1. Post to share your life\n2. Like and comment on posts you like\n3. Follow users you like\n4. Tag posts for easy categorization\n\nAny questions can be asked in the comments!", 10000, 7, 89, 23, 1876},
+			{"Community Announcement: Please be kind", "To maintain a good community atmosphere, please note:\n\n![Announcement](https://picsum.photos/seed/33/800/450)\n\n## Community Guidelines\n1. Be kind, respect others\n2. No ads or spam\n3. Don't spread misinformation\n4. Protect others' privacy\n\nHope everyone helps create a warm and friendly community!", 10000, 7, 156, 45, 2567},
+			{"Wrote a little poem while slacking today", "Inspiration hit while slacking today, wrote a little poem～\n\n![Poem](https://picsum.photos/seed/34/800/450)\n\n\"The Slacking Song\"\n\nWork piles up like a mountain,\nMy mind has already wandered.\nMouse clicks softly,\nSlacking is boundless.\n\nHaha, not that good, don't laugh too hard!", 10004, 1, 167, 38, 2654},
+			{"Sharing my efficient slacking guide", "As a veteran slacker, let me share how to slack efficiently!\n\n![Slacking Guide](https://picsum.photos/seed/35/800/450)\n\nEfficient slacking guide:\n1. Finish what must be done first\n2. Remaining time, do whatever you want\n3. Don't feel guilty\n4. Slacking is for better work\n\nProper slacking is good for physical and mental health!", 10005, 1, 145, 32, 2345},
 		}
 		for i, t := range topics {
 			database.DB.Exec(`INSERT INTO topics (id, title, content, user_id, forum_id, like_count, reply_count, view_count, created_at, updated_at)
@@ -377,7 +396,125 @@ func seedTopicsEn() {
 				10000+i, t.Title, t.Content, t.UserID, t.ForumID, t.LikeCount, t.ReplyCount, t.ViewCount)
 		}
 		log.Println("[seed] topics created (en)")
-		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('topics', 10010)")
+		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('topics', 10019)")
 		database.DB.Exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('comments', 9999)")
+	})
+}
+
+// ========== 话题-标签关联数据 ==========
+
+func seedTopicTagsZh() {
+	var count int64
+	database.DB.Model(&struct{}{}).Table("topic_tags").Count(&count)
+	checkAndInsert("topic_tags", &count, func() {
+		var tags []models.Tag
+		database.DB.Find(&tags)
+
+		var topics []models.Topic
+		database.DB.Find(&topics)
+
+		tagMap := make(map[string]uint)
+		for _, tag := range tags {
+			tagMap[tag.Name] = tag.ID
+		}
+
+		topicTagAssociations := []struct {
+			TopicIndex int
+			TagNames   []string
+		}{
+			{0, []string{"今日份松弛", "外耗模式"}},
+			{1, []string{"爱你老己", "今日小确幸"}},
+			{2, []string{"今日份松弛", "今日小确幸"}},
+			{3, []string{"邪修一下", "活人感日常"}},
+			{4, []string{"外耗模式", "我的互联网嘴替"}},
+			{5, []string{"笑死我了", "活人感日常"}},
+			{6, []string{"破防了", "今日小确幸"}},
+			{7, []string{"真香现场", "活人感日常"}},
+			{8, []string{"什么水平？", "求建议/避雷"}},
+			{9, []string{"求建议/避雷", "邪修一下"}},
+			{10, []string{"我的互联网嘴替", "今日份松弛"}},
+			{11, []string{"活人感日常", "今日小确幸"}},
+			{12, []string{"今日份松弛", "活人感日常"}},
+			{13, []string{"求建议/避雷", "什么水平？"}},
+			{14, []string{"今日小确幸", "今日份松弛"}},
+			{15, []string{"今日份松弛", "今日小确幸"}},
+			{16, []string{"邪修一下", "今日份松弛"}},
+			{17, []string{"邪修一下", "今日份松弛"}},
+			{18, []string{"今日份松弛", "邪修一下"}},
+			{19, []string{"邪修一下", "今日份松弛"}},
+		}
+
+		for _, assoc := range topicTagAssociations {
+			if assoc.TopicIndex < len(topics) {
+				var topicTags []models.Tag
+				for _, tagName := range assoc.TagNames {
+					if tagID, ok := tagMap[tagName]; ok {
+						topicTags = append(topicTags, models.Tag{ID: tagID})
+					}
+				}
+				if len(topicTags) > 0 {
+					database.DB.Model(&topics[assoc.TopicIndex]).Association("Tags").Replace(topicTags)
+				}
+			}
+		}
+		log.Println("[seed] topic tags created (zh)")
+	})
+}
+
+func seedTopicTagsEn() {
+	var count int64
+	database.DB.Model(&struct{}{}).Table("topic_tags").Count(&count)
+	checkAndInsert("topic_tags", &count, func() {
+		var tags []models.Tag
+		database.DB.Find(&tags)
+
+		var topics []models.Topic
+		database.DB.Find(&topics)
+
+		tagMap := make(map[string]uint)
+		for _, tag := range tags {
+			tagMap[tag.Name] = tag.ID
+		}
+
+		topicTagAssociations := []struct {
+			TopicIndex int
+			TagNames   []string
+		}{
+			{0, []string{"Chill Vibes", "Externalize"}},
+			{1, []string{"Love Yourself", "Small Wins"}},
+			{2, []string{"Chill Vibes", "Small Wins"}},
+			{3, []string{"Hack It", "Real Life"}},
+			{4, []string{"Externalize", "Mouthpiece"}},
+			{5, []string{"LOL", "Real Life"}},
+			{6, []string{"Emotional", "Small Wins"}},
+			{7, []string{"Plot Twist", "Real Life"}},
+			{8, []string{"Rate This", "Advice/Avoid"}},
+			{9, []string{"Advice/Avoid", "Hack It"}},
+			{10, []string{"Mouthpiece", "Chill Vibes"}},
+			{11, []string{"Real Life", "Small Wins"}},
+			{12, []string{"Chill Vibes", "Real Life"}},
+			{13, []string{"Advice/Avoid", "Rate This"}},
+			{14, []string{"Small Wins", "Chill Vibes"}},
+			{15, []string{"Chill Vibes", "Small Wins"}},
+			{16, []string{"Hack It", "Chill Vibes"}},
+			{17, []string{"Hack It", "Chill Vibes"}},
+			{18, []string{"Chill Vibes", "Hack It"}},
+			{19, []string{"Hack It", "Chill Vibes"}},
+		}
+
+		for _, assoc := range topicTagAssociations {
+			if assoc.TopicIndex < len(topics) {
+				var topicTags []models.Tag
+				for _, tagName := range assoc.TagNames {
+					if tagID, ok := tagMap[tagName]; ok {
+						topicTags = append(topicTags, models.Tag{ID: tagID})
+					}
+				}
+				if len(topicTags) > 0 {
+					database.DB.Model(&topics[assoc.TopicIndex]).Association("Tags").Replace(topicTags)
+				}
+			}
+		}
+		log.Println("[seed] topic tags created (en)")
 	})
 }

@@ -46,6 +46,7 @@ export default {
   home: {
     latestTopics: '最新帖子',
     hotTopics: '热门帖子',
+    hotTags: '热门话题',
     essenceTopics: '精华帖子',
     signIn: '签到',
     credits: '积分',

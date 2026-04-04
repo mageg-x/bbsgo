@@ -1,9 +1,9 @@
 <template>
   <div class="flex flex-col lg:flex-row gap-4 lg:gap-6 max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-    <aside class="w-full lg:w-40 flex-shrink-0 lg:block mb-4 lg:mb-0">
+    <aside class="w-full lg:w-48 flex-shrink-0 lg:block mb-4 lg:mb-0">
       <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b bg-gray-50">
-                    <h3 class="font-semibold text-gray-700">{{ t('home.hotTopics') }}</h3>
+          <h3 class="font-semibold text-gray-700">{{ t('home.hotTags') }}</h3>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1">
           <router-link v-for="tag in tags" :key="tag.id" :to="tag.id ? `/?tag=${tag.id}` : '/'" :class="['px-4 py-3 flex items-center justify-between transition-colors',
@@ -31,7 +31,8 @@
             </div>
             <div class="ml-3 flex-1">
               <h4 class="font-medium text-blue-900 text-sm sm:text-base">{{ announcement.title }}</h4>
-              <p v-if="announcement.content" class="mt-1 text-xs sm:text-sm text-blue-800">{{ announcement.content }}</p>
+              <p v-if="announcement.content" class="mt-1 text-xs sm:text-sm text-blue-800">{{ announcement.content }}
+              </p>
             </div>
           </div>
         </div>
@@ -46,12 +47,13 @@
                   <router-link :to="`/user/${topic.user_id}`">
                     <img :src="getUserAvatar(topic.user)" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full">
                   </router-link>
-                  <router-link :to="`/user/${topic.user_id}`" class="font-medium text-gray-900 hover:text-blue-500 text-sm sm:text-base truncate">
+                  <router-link :to="`/user/${topic.user_id}`"
+                    class="font-medium text-gray-900 hover:text-blue-500 text-sm sm:text-base truncate">
                     {{ getUserDisplayName(topic.user) }}
                   </router-link>
                   <div v-if="getAuthorBadges(topic).length > 0" class="flex items-center gap-0.5">
-                    <SvgBadge v-for="badge in getAuthorBadges(topic)" :key="badge.id"
-                      :type="badge.icon" :size="16" :title="badge.name" />
+                    <SvgBadge v-for="badge in getAuthorBadges(topic)" :key="badge.id" :type="badge.icon" :size="16"
+                      :title="badge.name" />
                   </div>
                   <span v-if="topic.forum" class="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">
                     {{ topic.forum.name }}
@@ -63,11 +65,14 @@
                 <h3
                   class="text-base sm:text-lg font-semibold mb-2 hover:text-blue-500 line-clamp-2 flex items-center flex-wrap gap-1">
                   <span v-if="topic.is_pinned"
-                    class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded font-medium">{{ t('home.pinned') }}</span>
+                    class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded font-medium">{{ t('home.pinned')
+                    }}</span>
                   <span v-if="topic.is_essence"
-                    class="text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded font-medium">{{ t('home.essence') }}</span>
+                    class="text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded font-medium">{{ t('home.essence')
+                    }}</span>
                   <span v-if="topic.is_locked"
-                    class="text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded font-medium">{{ t('home.locked') }}</span>
+                    class="text-xs bg-gray-500 text-white px-1.5 py-0.5 rounded font-medium">{{ t('home.locked')
+                    }}</span>
                   <span class="text-gray-900">{{ topic.title }}</span>
                 </h3>
                 <!-- 图片预览 -->
@@ -170,7 +175,8 @@
             signInStatus.signed_today
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
               : 'bg-blue-500 text-white hover:bg-blue-600']">
-            {{ signInLoading ? t('checkin.signInIng') : (signInStatus.signed_today ? t('checkin.signedToday') : t('checkin.signInNow')) }}
+            {{ signInLoading ? t('checkin.signInIng') : (signInStatus.signed_today ? t('checkin.signedToday') :
+              t('checkin.signInNow')) }}
           </button>
           <div v-if="signInStatus.last_sign_at" class="mt-2 text-xs text-gray-500">
             {{ t('checkin.signInDays', { days: getStreakDays() }) }}
