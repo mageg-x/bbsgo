@@ -25,6 +25,7 @@ type Topic struct {
 	LikeCount    int            `gorm:"default:0" json:"like_count"`          // 点赞数
 	ViewCount    int            `gorm:"default:0" json:"view_count"`          // 浏览数
 	ReplyCount   int            `gorm:"default:0" json:"reply_count"`         // 回复数
+	FavoriteCount int           `gorm:"default:0" json:"favorite_count"`      // 收藏数
 	LastReplyAt  *time.Time     `json:"last_reply_at"`                        // 最后回复时间
 	AllowComment bool           `gorm:"default:true" json:"allow_comment"`    // 是否允许评论
 	CreatedAt    time.Time      `json:"created_at"`                           // 创建时间

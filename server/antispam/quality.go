@@ -113,6 +113,11 @@ func (s *ContentQualityService) isOnlySymbols(content string) bool {
 func (s *ContentQualityService) isTooShort(content string) bool {
 	minLength := s.config.GetInt(ConfigMinContentLength, 10)
 
+	// 如果最小长度为 0，表示不限制长度，直接返回 false
+	if minLength <= 0 {
+		return false
+	}
+
 	codeBlockRegex := regexp.MustCompile("```[\\s\\S]*?```")
 	contentWithoutCode := codeBlockRegex.ReplaceAllString(content, "")
 

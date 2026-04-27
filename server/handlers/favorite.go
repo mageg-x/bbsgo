@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bbsgo/cache"
 	"bbsgo/database"
 	"bbsgo/errors"
 	"bbsgo/middleware"
@@ -55,6 +56,15 @@ func CreateFavorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 更新话题收藏数
+	if err := database.DB.Model(&models.Topic{}).Where("id = ?", req.TopicID).
+		UpdateColumn("favorite_count", database.DB.Raw("favorite_count + 1")).Error; err != nil {
+		log.Printf("create favorite: failed to update topic favorite count, topicID: %d, error: %v", req.TopicID, err)
+	}
+
+	// 清除首页缓存
+	cache.HomePageCache.InvalidateTopics()
+
 	log.Printf("create favorite: favorite created successfully, userID: %d, topicID: %d", userID, req.TopicID)
 	errors.Success(w, favorite)
 }
@@ -94,6 +104,15 @@ func DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
+
+	// 更新话题收藏数
+	if err := database.DB.Model(&models.Topic{}).Where("id = ?", topicID).
+		UpdateColumn("favorite_count", database.DB.Raw("CASE WHEN favorite_count > 0 THEN favorite_count - 1 ELSE 0 END")).Error; err != nil {
+		log.Printf("delete favorite: failed to update topic favorite count, topicID: %d, error: %v", topicID, err)
+	}
+
+	// 清除首页缓存
+	cache.HomePageCache.InvalidateTopics()
 
 	log.Printf("delete favorite: favorite deleted successfully, userID: %d, topicID: %d", userID, topicID)
 	errors.Success(w, nil)

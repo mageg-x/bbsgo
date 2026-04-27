@@ -280,7 +280,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateComment 更新评论处理器
-// 仅评论作者可以更新
+// 评论作者、管理员或帖子主人可以更新
 func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// 验证用户登录
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -301,8 +301,26 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 验证权限：仅作者可以更新
-	if comment.UserID != userID {
+	// 查询关联话题用于权限判断
+	var topic models.Topic
+	if err := database.DB.First(&topic, comment.TopicID).Error; err != nil {
+		log.Printf("update comment: topic not found, topicID: %d, error: %v", comment.TopicID, err)
+	}
+
+	// 查询用户信息用于权限判断
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		log.Printf("update comment: user not found, userID: %d, error: %v", userID, err)
+		errors.Error(w, errors.CodeUserNotFound, "")
+		return
+	}
+
+	// 验证权限：评论作者、管理员(role>=1)或帖子主人可以更新
+	isCommentAuthor := comment.UserID == userID
+	isAdmin := user.Role >= 1
+	isTopicAuthor := topic.UserID == userID
+
+	if !isCommentAuthor && !isAdmin && !isTopicAuthor {
 		log.Printf("update comment: permission denied, commentID: %d, userID: %d", id, userID)
 		errors.Error(w, errors.CodeNoPermission, "")
 		return
@@ -363,6 +381,12 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 查询关联话题用于权限判断和更新评论数
+	var topic models.Topic
+	if err := database.DB.First(&topic, comment.TopicID).Error; err != nil {
+		log.Printf("delete comment: topic not found, topicID: %d, error: %v", comment.TopicID, err)
+	}
+
 	// 查询用户信息用于权限判断
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
@@ -371,17 +395,15 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 验证权限：作者或管理员(role>=1)可以删除
-	if comment.UserID != userID && user.Role < 1 {
+	// 验证权限：作者、管理员(role>=1)或帖子主人可以删除
+	isCommentAuthor := comment.UserID == userID
+	isAdmin := user.Role >= 1
+	isTopicAuthor := topic.UserID == userID
+
+	if !isCommentAuthor && !isAdmin && !isTopicAuthor {
 		log.Printf("delete comment: permission denied, commentID: %d, userID: %d", id, userID)
 		errors.Error(w, errors.CodeNoPermission, "")
 		return
-	}
-
-	// 查询关联话题用于更新评论数
-	var topic models.Topic
-	if err := database.DB.First(&topic, comment.TopicID).Error; err != nil {
-		log.Printf("delete comment: topic not found, topicID: %d, error: %v", comment.TopicID, err)
 	}
 
 	// 物理删除评论

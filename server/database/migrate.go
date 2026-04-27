@@ -43,7 +43,32 @@ func AutoMigrate() {
 	// 创建复合索引优化查询性能
 	createCompositeIndexes()
 
+	// 同步现有收藏数到 topic 表的 favorite_count 字段
+	syncFavoriteCounts()
+
 	log.Println("database migrated successfully")
+}
+
+// syncFavoriteCounts 同步现有收藏数到 topic 表
+func syncFavoriteCounts() {
+	log.Println("syncing favorite counts to topics...")
+
+	// 更新所有话题的 favorite_count
+	result := DB.Exec(`
+		UPDATE topics 
+		SET favorite_count = (
+			SELECT COUNT(*) 
+			FROM favorites 
+			WHERE favorites.topic_id = topics.id
+		)
+	`)
+	if result.Error != nil {
+		log.Printf("failed to sync favorite counts: %v", result.Error)
+		return
+	}
+	if result.RowsAffected > 0 {
+		log.Printf("synced favorite counts for %d topics", result.RowsAffected)
+	}
 }
 
 // createCompositeIndexes 创建复合索引优化查询性能

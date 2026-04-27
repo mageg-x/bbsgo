@@ -235,7 +235,10 @@ export default {
     commentFailed: 'Comment failed',
     pinned: 'Pinned',
     video: 'Video',
-    poll: 'Poll'
+    poll: 'Poll',
+    expandMore: 'Show {count} more',
+    collapse: 'Collapse',
+    moreReplies: '{count} more replies'
   },
   user: {
     profile: 'Profile',

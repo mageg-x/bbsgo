@@ -235,7 +235,10 @@ export default {
     commentFailed: '评论失败',
     pinned: '置顶',
     video: '视频',
-    poll: '投票'
+    poll: '投票',
+    expandMore: '展开 {count} 条',
+    collapse: '收起',
+    moreReplies: '还有 {count} 条回复'
   },
   user: {
     profile: '个人主页',

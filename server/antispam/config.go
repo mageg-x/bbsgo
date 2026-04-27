@@ -193,7 +193,7 @@ func (s *ConfigService) GetDefaultConfigs() map[string]string {
 		ConfigNewUserMaxTopicsPerDay:     "3",
 		ConfigNewUserMaxCommentsPerDay:   "10",
 		ConfigNewUserHours:               "24",
-		ConfigMinContentLength:           "10",
+		ConfigMinContentLength:           "0",
 		ConfigSimilarityThreshold:        "0.8",
 		ConfigRepeatCharThreshold:        "5",
 		ConfigReportThreshold:            "3",

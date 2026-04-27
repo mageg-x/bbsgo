@@ -160,54 +160,28 @@
         {{ t('topic.lockedTip') }}
       </div>
       <div class="space-y-4">
-        <div v-for="post in sortedPosts" :key="post.id" :id="'post-' + post.id"
-          :class="[
-            'flex space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg transition-all',
-            post.is_best ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 shadow-md' : 'bg-gray-50'
-          ]">
-          
-          <div class="flex-1">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1 gap-2">
-              <div class="flex items-center flex-wrap gap-1 sm:gap-2">
-                <img :src="getUserAvatar(post.user)" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0">
-                <span v-if="post.is_best" class="px-2 py-0.5 text-xs font-bold bg-yellow-500 text-white rounded-full animate-pulse">{{ t('topic.best') }}</span>
-                <span v-if="post.is_pinned" class="text-xs text-red-500 font-medium">{{ t('topic.pin') }}</span>
-                <SvgBadge v-if="post.is_best" type="gold-comment" :size="16" :title="t('topic.bestComment')" />
-                <span class="font-medium text-gray-900 text-sm sm:text-base">{{ getUserDisplayName(post.user) }}</span>
-                <span v-if="post.reply_user" class="text-gray-400 text-xs sm:text-sm">{{ t('topic.reply') }} @{{ post.reply_user.nickname || post.reply_user.username }}</span>
-                <span v-if="post.user_id === topic?.user_id" class="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">{{ t('topic.author') }}</span>
-                <div v-if="getCommentAuthorTopBadge(post)" class="flex items-center gap-0.5">
-                  <SvgBadge :type="getCommentAuthorTopBadge(post).icon" :size="14" :title="getCommentAuthorTopBadge(post).name" />
-                </div>
-                <span class="text-xs sm:text-sm text-gray-500">{{ formatTime(post.created_at) }}</span>
-              </div>
-              <div class="flex flex-wrap gap-1 sm:gap-2">
-                <button v-if="canBestComment(post)" @click="toggleCommentBest(post)"
-                  :class="['text-xs transition-colors', post.is_best ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-400 hover:text-yellow-500']">
-                  {{ post.is_best ? t('topic.cancelBest') : t('topic.markBest') }}
-                </button>
-                <button v-if="canPinComment(post)" @click="toggleCommentPin(post)"
-                  :class="['text-xs transition-colors', post.is_pinned ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-500']">
-                  {{ post.is_pinned ? t('topic.cancelPin') : t('topic.setPin') }}
-                </button>
-                <button v-if="canDeletePost(post)" @click="handleDeletePost(post)"
-                  class="text-xs text-gray-400 hover:text-red-500 transition-colors">{{ t('common.delete') }}</button>
-                <button v-if="canReportPost(post)"
-                  @click="openReportDialog('comment', post.id, post.content.substring(0, 50))"
-                  class="text-xs text-gray-400 hover:text-red-500 transition-colors">{{ t('topic.report') }}</button>
-              </div>
-            </div>
-
-            <p class="text-gray-700 text-sm sm:text-base mt-2">{{ post.content }}</p>
-            <div class="flex items-center gap-3 sm:space-x-4 mt-2 text-sm">
-              <button @click="togglePostLike(post)"
-                :class="['transition-colors', getPostLiked(post.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500']">
-                {{ getPostLiked(post.id) ? '❤️' : '🤍' }} {{ post.like_count }}
-              </button>
-              <button @click="openReply(post)" class="text-gray-500 hover:text-blue-500">{{ t('topic.reply') }}</button>
-            </div>
-          </div>
-        </div>
+        <CommentItem
+          v-for="comment in commentTree"
+          :key="comment.id"
+          :comment="comment"
+          :level="0"
+          :topic-author-id="topic?.user_id"
+          @toggle-best="toggleCommentBest"
+          @toggle-pin="toggleCommentPin"
+          @delete="handleDeletePost"
+          @report="(c) => openReportDialog('comment', c.id, c.content.substring(0, 50))"
+          @toggle-like="togglePostLike"
+          @reply="openReply"
+          :get-user-avatar="getUserAvatar"
+          :get-user-display-name="getUserDisplayName"
+          :get-comment-author-top-badge="getCommentAuthorTopBadge"
+          :can-best-comment="canBestComment"
+          :can-pin-comment="canPinComment"
+          :can-delete-post="canDeletePost"
+          :can-report-post="canReportPost"
+          :get-post-liked="getPostLiked"
+          :format-time="formatTime"
+        />
       </div>
     </div>
 
@@ -363,6 +337,7 @@ import { getDisplayBadges } from '@/utils/badge'
 import { getErrorI18nKey } from '@/utils/error'
 import QRCode from 'qrcode'
 import SvgBadge from '@/components/SvgBadge.vue'
+import CommentItem from '@/components/CommentItem.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -431,11 +406,46 @@ const sortedPosts = computed(() => {
   })
 })
 
+const commentTree = computed(() => {
+  const commentMap = new Map()
+  const rootComments = []
+
+  posts.value.forEach(comment => {
+    commentMap.set(comment.id, { ...comment, replies: [] })
+  })
+
+  posts.value.forEach(comment => {
+    const treeComment = commentMap.get(comment.id)
+    if (comment.reply_to_id && commentMap.has(comment.reply_to_id)) {
+      const parentComment = commentMap.get(comment.reply_to_id)
+      parentComment.replies.push(treeComment)
+    } else {
+      rootComments.push(treeComment)
+    }
+  })
+
+  function sortComments(comments) {
+    return [...comments].sort((a, b) => {
+      if (a.is_best && !b.is_best) return -1
+      if (!a.is_best && b.is_best) return 1
+      if (a.is_pinned && !b.is_pinned) return -1
+      if (!a.is_pinned && b.is_pinned) return 1
+      return new Date(b.created_at) - new Date(a.created_at)
+    }).map(comment => ({
+      ...comment,
+      replies: sortComments(comment.replies)
+    }))
+  }
+
+  return sortComments(rootComments)
+})
+
 function canDeletePost(post) {
   if (!userStore.isLoggedIn) return false
-  const isAuthor = post.user_id === userStore.user?.id
+  const isCommentAuthor = post.user_id === userStore.user?.id
   const isAdmin = userStore.user?.role === 2
-  return isAuthor || isAdmin
+  const isTopicAuthor = topic.value?.user_id === userStore.user?.id
+  return isCommentAuthor || isAdmin || isTopicAuthor
 }
 
 function canReportPost(post) {
