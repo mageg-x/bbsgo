@@ -186,24 +186,24 @@ const (
 // GetDefaultConfigs 获取默认配置项
 func (s *ConfigService) GetDefaultConfigs() map[string]string {
 	return map[string]string{
-		ConfigTopicMinInterval:           "60",
-		ConfigCommentMinInterval:         "30",
-		ConfigMaxTopicsPerDay:            "10",
-		ConfigMaxCommentsPerDay:          "50",
-		ConfigNewUserMaxTopicsPerDay:     "3",
-		ConfigNewUserMaxCommentsPerDay:   "10",
+		ConfigTopicMinInterval:           "0",
+		ConfigCommentMinInterval:         "0",
+		ConfigMaxTopicsPerDay:            "100",
+		ConfigMaxCommentsPerDay:          "200",
+		ConfigNewUserMaxTopicsPerDay:     "10",
+		ConfigNewUserMaxCommentsPerDay:   "50",
 		ConfigNewUserHours:               "24",
 		ConfigMinContentLength:           "0",
-		ConfigSimilarityThreshold:        "0.8",
+		ConfigSimilarityThreshold:        "0.9",
 		ConfigRepeatCharThreshold:        "5",
 		ConfigReportThreshold:            "3",
 		ConfigReportBanThreshold:         "5",
 		ConfigReportBanDays:             "3",
 		ConfigMaxReportsPerDay:           "10",
-		ConfigLowQualityHotMultiplier:    "0.3",
-		ConfigLowReputationHotMultiplier: "0.5",
+		ConfigLowQualityHotMultiplier:    "0.5",
+		ConfigLowReputationHotMultiplier: "0.8",
 		ConfigLowReputationThreshold:     "60",
-		ConfigBanLowReputation:           "true",
+		ConfigBanLowReputation:           "false",
 		ConfigBanReputationThreshold:     "20",
 	}
 }
@@ -214,28 +214,41 @@ func (s *ConfigService) InitializeDefaults() {
 
 	defaults := s.GetDefaultConfigs()
 	createdCount := 0
+	updatedCount := 0
 
-	for key, value := range defaults {
+	for key, newValue := range defaults {
 		var config models.AntiSpamConfig
 		result := database.DB.Where("key = ?", key).First(&config)
 
 		if result.Error != nil {
 			config = models.AntiSpamConfig{
 				Key:   key,
-				Value: value,
+				Value: newValue,
 			}
 			if err := database.DB.Create(&config).Error; err != nil {
 				log.Printf("[config] create default failed, key: %s, value: %s, error: %v",
-					key, value, err)
+					key, newValue, err)
 			} else {
 				createdCount++
-				log.Printf("[config] created default, key: %s, value: %s", key, value)
+				log.Printf("[config] created default, key: %s, value: %s", key, newValue)
+			}
+		} else {
+			if config.Value != newValue {
+				oldValue := config.Value
+				config.Value = newValue
+				if err := database.DB.Save(&config).Error; err != nil {
+					log.Printf("[config] update default failed, key: %s, old: %s, new: %s, error: %v",
+						key, oldValue, newValue, err)
+				} else {
+					updatedCount++
+					log.Printf("[config] updated default, key: %s, old: %s, new: %s", key, oldValue, newValue)
+				}
 			}
 		}
 	}
 
 	s.LoadFromDB()
-	log.Printf("[config] initialized, created %d new configs", createdCount)
+	log.Printf("[config] initialized, created %d new configs, updated %d configs", createdCount, updatedCount)
 }
 
 func init() {

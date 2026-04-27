@@ -81,22 +81,24 @@ func (s *RateLimitService) checkRateLimit(userID uint, operation string, minInte
 			userID, user.CreatedAt, maxPerDay)
 	}
 
-	// 4. 检查最小间隔
-	var lastOp models.UserOperation
-	result := database.DB.Where("user_id = ? AND operation = ?", userID, operation).
-		Order("created_at DESC").
-		First(&lastOp)
+	// 4. 检查最小间隔（如果 minInterval > 0 才检查）
+	if minInterval > 0 {
+		var lastOp models.UserOperation
+		result := database.DB.Where("user_id = ? AND operation = ?", userID, operation).
+			Order("created_at DESC").
+			First(&lastOp)
 
-	if result.Error == nil {
-		elapsed := time.Since(lastOp.CreatedAt)
-		if elapsed < time.Duration(minInterval)*time.Second {
-			retryAfter := minInterval - int(elapsed.Seconds())
-			log.Printf("[ratelimit] interval too short, userID: %d, op: %s, elapsed: %.0fs, minInterval: %ds, retryAfter: %ds",
-				userID, operation, elapsed.Seconds(), minInterval, retryAfter)
-			return &RateLimitResult{
-				Allowed:    false,
-				Reason:     "操作过快，请稍后再试",
-				RetryAfter: retryAfter,
+		if result.Error == nil {
+			elapsed := time.Since(lastOp.CreatedAt)
+			if elapsed < time.Duration(minInterval)*time.Second {
+				retryAfter := minInterval - int(elapsed.Seconds())
+				log.Printf("[ratelimit] interval too short, userID: %d, op: %s, elapsed: %.0fs, minInterval: %ds, retryAfter: %ds",
+					userID, operation, elapsed.Seconds(), minInterval, retryAfter)
+				return &RateLimitResult{
+					Allowed:    false,
+					Reason:     "操作过快，请稍后再试",
+					RetryAfter: retryAfter,
+				}
 			}
 		}
 	}
