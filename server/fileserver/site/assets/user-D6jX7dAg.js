@@ -1,0 +1,1 @@
+function c(n){if(n!=null&&n.avatar)return n.avatar;const e=(n==null?void 0:n.username)||"default";return`https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(e)}`}function i(n,e){const o=(n==null?void 0:n.nickname)||(n==null?void 0:n.username);return o||(e?e("user.unknown"):"未知用户")}export{i as a,c as g};

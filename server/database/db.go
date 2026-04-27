@@ -19,19 +19,24 @@ var DB *gorm.DB
 func getDBPath() string {
 	var dir string
 
-	switch runtime.GOOS {
-	case "windows":
-		dir = os.Getenv("APPDATA")
-		if dir == "" {
-			dir = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Roaming")
+	// 优先使用环境变量指定的路径
+	if envDir := os.Getenv("BBSGO_DATA_DIR"); envDir != "" {
+		dir = envDir
+	} else {
+		switch runtime.GOOS {
+		case "windows":
+			dir = os.Getenv("APPDATA")
+			if dir == "" {
+				dir = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Roaming")
+			}
+			dir = filepath.Join(dir, "bbsgo")
+		case "darwin":
+			dir = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "bbsgo")
+		case "linux":
+			dir = filepath.Join(os.Getenv("HOME"), ".bbsgo")
+		default:
+			dir = "."
 		}
-		dir = filepath.Join(dir, "bbsgo")
-	case "darwin":
-		dir = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "bbsgo")
-	case "linux":
-		dir = filepath.Join(os.Getenv("HOME"), ".bbsgo")
-	default:
-		dir = "."
 	}
 
 	// 确保目录存在

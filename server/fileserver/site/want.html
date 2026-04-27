@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBSGO 下载 - 超轻量级论坛系统 | Lightweight BBS Forum</title>
+    <meta name="description" content="下载 BBSGO，超轻量级论坛工具。单个二进制文件，无需数据库，Windows/Linux/macOS 均可运行。">
+    <meta name="keywords" content="BBS下载,论坛系统下载,轻量级bbs,开源论坛,gin论坛,vue3论坛">
+    <meta name="robots" content="noindex, nofollow">
+
+    <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      .hero {
+        text-align: center;
+        padding: 4rem 0;
+        color: white;
+      }
+      .hero h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      }
+      .hero p {
+        font-size: 1.25rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto 2rem;
+        line-height: 1.6;
+      }
+      .download-btn {
+        display: inline-block;
+        background: white;
+        color: #667eea;
+        padding: 1rem 2.5rem;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: transform 0.3s, box-shadow 0.3s;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      }
+      .download-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      }
+      .section {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      }
+      .section h2 {
+        font-size: 2rem;
+        color: #333;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+      }
+      .feature-card {
+        background: #f8f9ff;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: transform 0.3s;
+      }
+      .feature-card:hover {
+        transform: translateY(-5px);
+      }
+      .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+      }
+      .feature-card h3 {
+        font-size: 1.2rem;
+        color: #333;
+        margin-bottom: 0.5rem;
+      }
+      .feature-card p {
+        color: #666;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .carousel {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #f0f0f0;
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      .carousel-track {
+        display: flex;
+        transition: transform 0.5s ease;
+      }
+      .carousel-slide {
+        min-width: 100%;
+        position: relative;
+        height: 360px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .carousel-slide img {
+        max-width: 100%;
+        max-height: 360px;
+        width: auto;
+        height: 360px;
+        display: block;
+        object-fit: contain;
+      }
+      .carousel-nav {
+        position: absolute;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+      }
+      .carousel-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.5);
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+      .carousel-dot.active {
+        background: white;
+      }
+      .carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255,255,255,0.9);
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      }
+      .carousel-btn:hover {
+        background: white;
+      }
+      .carousel-btn.prev { left: 1rem; }
+      .carousel-btn.next { right: 1rem; }
+      .download-section {
+        text-align: center;
+      }
+      .download-cards {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+      }
+      .download-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        min-width: 200px;
+        transition: transform 0.3s;
+      }
+      .download-card:hover {
+        transform: scale(1.05);
+      }
+      .download-card .os {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      .download-card .arch {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-bottom: 1rem;
+      }
+      .download-card a {
+        display: inline-block;
+        background: white;
+        color: #667eea;
+        padding: 0.6rem 1.5rem;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: transform 0.3s;
+      }
+      .download-card a:hover {
+        transform: scale(1.1);
+      }
+      .footer {
+        text-align: center;
+        padding: 2rem;
+        color: rgba(255,255,255,0.8);
+      }
+      .footer a {
+        color: white;
+      }
+      .lang-switch {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 100;
+      }
+      .lang-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.3s;
+      }
+      .lang-btn:hover, .lang-btn.active {
+        background: rgba(255,255,255,0.4);
+      }
+      .back-link {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        color: white;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      @media (max-width: 768px) {
+        .hero h1 { font-size: 2rem; }
+        .hero p { font-size: 1rem; }
+        .section { padding: 1.5rem; }
+        .carousel-btn { width: 40px; height: 40px; font-size: 1.2rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <a href="/" class="back-link">← 返回首页</a>
+
+    <div class="lang-switch">
+      <button class="lang-btn active" data-lang="zh">中文</button>
+      <button class="lang-btn" data-lang="en">English</button>
+    </div>
+
+    <div class="container">
+      <div class="hero">
+        <h1 id="title">BBSGO</h1>
+        <p id="subtitle">超轻量级论坛工具 · 单个二进制文件 · 无需数据库依赖<br>为您的网站快速扩展社区功能</p>
+        <a href="#download" class="download-btn" id="downloadBtn">立即下载</a>
+      </div>
+
+      <div class="section">
+        <h2 id="featuresTitle">核心特性</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🚀</div>
+            <h3 id="f1Title">零配置部署</h3>
+            <p id="f1Desc">单个二进制文件，下载即运行。Windows、Linux、macOS 全平台支持，无需安装数据库或其他依赖。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📝</div>
+            <h3 id="f2Title">Markdown 富文本</h3>
+            <p id="f2Desc">内置 ByteMD 编辑器，支持 Markdown 语法，实时预览，让内容创作更高效。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🏷️</div>
+            <h3 id="f3Title">标签与分类</h3>
+            <p id="f3Desc">灵活的标签系统，支持多级分类，让内容组织更清晰，用户更容易发现感兴趣的内容。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3 id="f4Title">投票功能</h3>
+            <p id="f4Desc">支持单选和多选投票，适合社区调研、民意收集等场景，增强用户互动。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">👥</div>
+            <h3 id="f5Title">关注系统</h3>
+            <p id="f5Desc">用户可以关注其他用户和话题，第一时间获取更新，增强社区粘性。</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3 id="f6Title">安全防护</h3>
+            <p id="f6Desc">内置反垃圾机制、登录限流、内容审核等多重安全保护，保障社区健康发展。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 id="screenshotsTitle">产品截图</h2>
+        <div class="carousel">
+          <div class="carousel-track" id="carouselTrack">
+            <div class="carousel-slide">
+              <img src="/snapshot/cn/home.png" alt="首页截图" onerror="this.src='/snapshot/en/home.png'">
+            </div>
+            <div class="carousel-slide">
+              <img src="/snapshot/cn/topic.png" alt="话题详情" onerror="this.src='/snapshot/en/topic.png'">
+            </div>
+            <div class="carousel-slide">
+              <img src="/snapshot/cn/post.png" alt="发布内容" onerror="this.src='/snapshot/en/post.png'">
+            </div>
+            <div class="carousel-slide">
+              <img src="/snapshot/cn/profile.png" alt="个人主页" onerror="this.src='/snapshot/en/profile.png'">
+            </div>
+            <div class="carousel-slide">
+              <img src="/snapshot/cn/console.png" alt="管理后台" onerror="this.src='/snapshot/en/console.png'">
+            </div>
+            <div class="carousel-slide">
+              <img src="/snapshot/cn/chat.png" alt="聊天功能" onerror="this.src='/snapshot/en/chat.png'">
+            </div>
+          </div>
+          <button class="carousel-btn prev" onclick="moveSlide(-1)">‹</button>
+          <button class="carousel-btn next" onclick="moveSlide(1)">›</button>
+          <div class="carousel-nav" id="carouselNav"></div>
+        </div>
+      </div>
+
+      <div class="section download-section" id="download">
+        <h2 id="downloadTitle">下载 BBSGO</h2>
+        <p id="downloadSubtitle" style="color: #666; margin-top: 0.5rem;">选择适合您系统的版本</p>
+        <div class="download-cards">
+          <div class="download-card">
+            <div class="os">Windows</div>
+            <div class="arch">x86_64</div>
+            <a href="https://gh-proxy.ma3ok.com/github.com/mageg-x/bbsgo/releases/download/v1.0.0/bbsgo-windows-amd64.zip" target="_blank" rel="noopener">下载 .exe</a>
+          </div>
+          <div class="download-card">
+            <div class="os">Linux</div>
+            <div class="arch">x86_64</div>
+            <a href="https://gh-proxy.ma3ok.com/github.com/mageg-x/bbsgo/releases/download/v1.0.0/bbsgo-linux-amd64" target="_blank" rel="noopener">下载 Binary</a>
+          </div>
+          <div class="download-card">
+            <div class="os">macOS</div>
+            <div class="arch">Apple Silicon</div>
+            <a href="https://gh-proxy.ma3ok.com/github.com/mageg-x/bbsgo/releases/download/v1.0.0/bbsgo-macos-arm64.zip" target="_blank" rel="noopener">下载 Binary</a>
+          </div>
+        </div>
+        <p id="downloadNote" style="margin-top: 1.5rem; font-size: 0.9rem; color: #888;">下载后赋予执行权限即可运行：chmod +x bbsgo-*</p>
+      </div>
+
+      <div class="footer">
+        <p>BBSGO © 2024 | <a href="https://github.com/your-repo/bbsgo" target="_blank">GitHub</a></p>
+      </div>
+    </div>
+
+    <script>
+      // 轮播功能
+      const track = document.getElementById('carouselTrack');
+      const nav = document.getElementById('carouselNav');
+      const totalSlides = 6;
+      let currentSlide = 0;
+
+      // 生成导航点
+      for (let i = 0; i < totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        nav.appendChild(dot);
+      }
+
+      function updateCarousel() {
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+        document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+          dot.classList.toggle('active', i === currentSlide);
+        });
+      }
+
+      function moveSlide(n) {
+        currentSlide = (currentSlide + n + totalSlides) % totalSlides;
+        updateCarousel();
+      }
+
+      function goToSlide(n) {
+        currentSlide = n;
+        updateCarousel();
+      }
+
+      // 自动轮播
+      let autoPlay = setInterval(() => moveSlide(1), 4000);
+      document.querySelector('.carousel').onmouseenter = () => clearInterval(autoPlay);
+      document.querySelector('.carousel').onmouseleave = () => autoPlay = setInterval(() => moveSlide(1), 4000);
+
+      // i18n
+      const i18n = {
+        zh: {
+          title: 'BBSGO',
+          subtitle: '超轻量级论坛工具 · 单个二进制文件 · 无需数据库依赖<br>为您的网站快速扩展社区功能',
+          downloadBtn: '立即下载',
+          featuresTitle: '核心特性',
+          f1Title: '零配置部署',
+          f1Desc: '单个二进制文件，下载即运行。Windows、Linux、macOS 全平台支持，无需安装数据库或其他依赖。',
+          f2Title: 'Markdown 富文本',
+          f2Desc: '内置 ByteMD 编辑器，支持 Markdown 语法，实时预览，让内容创作更高效。',
+          f3Title: '标签与分类',
+          f3Desc: '灵活的标签系统，支持多级分类，让内容组织更清晰，用户更容易发现感兴趣的内容。',
+          f4Title: '投票功能',
+          f4Desc: '支持单选和多选投票，适合社区调研、民意收集等场景，增强用户互动。',
+          f5Title: '关注系统',
+          f5Desc: '用户可以关注其他用户和话题，第一时间获取更新，增强社区粘性。',
+          f6Title: '安全防护',
+          f6Desc: '内置反垃圾机制、登录限流、内容审核等多重安全保护，保障社区健康发展。',
+          screenshotsTitle: '产品截图',
+          downloadTitle: '下载 BBSGO',
+          downloadSubtitle: '选择适合您系统的版本',
+          downloadNote: '下载后赋予执行权限即可运行：chmod +x bbsgo-*'
+        },
+        en: {
+          title: 'BBSGO',
+          subtitle: 'Ultra-Lightweight Forum Tool · Single Binary · Zero Dependencies<br>Add community features to your site in minutes',
+          downloadBtn: 'Download Now',
+          featuresTitle: 'Core Features',
+          f1Title: 'Zero-Config Deployment',
+          f1Desc: 'Single binary, runs immediately. Supports Windows, Linux, macOS. No database or other dependencies required.',
+          f2Title: 'Markdown Editor',
+          f2Desc: 'Built-in ByteMD editor with Markdown support and live preview for efficient content creation.',
+          f3Title: 'Tags & Categories',
+          f3Desc: 'Flexible tag system with multi-level categories. Better content organization for easier discovery.',
+          f4Title: 'Polls & Voting',
+          f4Desc: 'Single and multiple choice polls. Perfect for surveys and feedback collection to boost engagement.',
+          f5Title: 'Follow System',
+          f5Desc: 'Users can follow others and topics. Get notified about updates to keep the community engaged.',
+          f6Title: 'Security Protection',
+          f6Desc: 'Built-in anti-spam, login rate limiting, and content moderation to keep your community healthy.',
+          screenshotsTitle: 'Screenshots',
+          downloadTitle: 'Download BBSGO',
+          downloadSubtitle: 'Choose the version for your system',
+          downloadNote: 'After download, make it executable: chmod +x bbsgo-*'
+        }
+      };
+
+      function setLanguage(lang) {
+        const t = i18n[lang];
+        document.getElementById('title').textContent = t.title;
+        document.getElementById('subtitle').innerHTML = t.subtitle;
+        document.getElementById('downloadBtn').textContent = t.downloadBtn;
+        document.getElementById('featuresTitle').textContent = t.featuresTitle;
+        document.getElementById('f1Title').textContent = t.f1Title;
+        document.getElementById('f1Desc').textContent = t.f1Desc;
+        document.getElementById('f2Title').textContent = t.f2Title;
+        document.getElementById('f2Desc').textContent = t.f2Desc;
+        document.getElementById('f3Title').textContent = t.f3Title;
+        document.getElementById('f3Desc').textContent = t.f3Desc;
+        document.getElementById('f4Title').textContent = t.f4Title;
+        document.getElementById('f4Desc').textContent = t.f4Desc;
+        document.getElementById('f5Title').textContent = t.f5Title;
+        document.getElementById('f5Desc').textContent = t.f5Desc;
+        document.getElementById('f6Title').textContent = t.f6Title;
+        document.getElementById('f6Desc').textContent = t.f6Desc;
+        document.getElementById('screenshotsTitle').textContent = t.screenshotsTitle;
+        document.getElementById('downloadTitle').textContent = t.downloadTitle;
+        document.getElementById('downloadSubtitle').textContent = t.downloadSubtitle;
+        document.getElementById('downloadNote').textContent = t.downloadNote;
+
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.lang === lang);
+        });
+
+        // 更新截图路径
+        document.querySelectorAll('.carousel-slide img').forEach((img, i) => {
+          const screenshots = ['home', 'topic', 'post', 'profile', 'console', 'chat'];
+          img.src = `/snapshot/${lang}/` + screenshots[i] + '.png';
+        });
+
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en-US';
+      }
+
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.onclick = () => setLanguage(btn.dataset.lang);
+      });
+    </script>
+  </body>
+</html>
