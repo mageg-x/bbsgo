@@ -69,4 +69,19 @@ export const authApi = {
   logout: () => api.post('/logout'),
 }
 
+export const draftApi = {
+  getDrafts: () => api.get('/drafts'),
+  getDraft: (id) => api.get(`/drafts/${id}`),
+  createDraft: (data) => api.post('/drafts', data),
+  updateDraft: (id, data) => api.put(`/drafts/${id}`, data),
+  deleteDraft: (id) => api.delete(`/drafts/${id}`),
+  getConfig: () => api.get('/drafts/config'),
+  getVersions: (draftId) => api.get(`/drafts/${draftId}/versions`),
+  createVersion: (draftId, data) => api.post(`/drafts/${draftId}/versions`, data),
+  getVersion: (draftId, versionId) => api.get(`/drafts/${draftId}/versions/${versionId}`),
+  previewVersion: (draftId, versionId) => api.get(`/drafts/${draftId}/versions/${versionId}/preview`),
+  restoreVersion: (draftId, versionId) => api.post(`/drafts/${draftId}/versions/${versionId}/restore`),
+  deleteVersion: (draftId, versionId) => api.delete(`/drafts/${draftId}/versions/${versionId}`),
+}
+
 export default api;

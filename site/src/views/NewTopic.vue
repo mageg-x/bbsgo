@@ -211,25 +211,56 @@
           </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-          <button type="button" @click="$router.back()"
-            class="px-6 sm:px-8 py-2.5 sm:py-3.5 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 font-semibold transition-all order-2 sm:order-1">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="submit" :disabled="submitting"
-            class="px-6 sm:px-10 py-2.5 sm:py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 order-1 sm:order-2">
-            <span v-if="submitting" class="inline-flex items-center gap-2">
-              <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none">
-                </circle>
-                <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
+        <div class="flex flex-col sm:flex-row justify-between items-center pt-4">
+          <div class="flex items-center gap-4 mb-3 sm:mb-0">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+              <div v-if="isAutoSaving" class="flex items-center gap-1">
+                <svg class="w-4 h-4 animate-spin text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span class="text-blue-500">{{ t('newTopic.saving') }}</span>
+              </div>
+              <div v-else-if="lastSavedTime" class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>{{ t('newTopic.lastSaved') }} {{ formatLastSavedTime() }}</span>
+              </div>
+              <div v-else class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>{{ t('newTopic.autoSaveEnabled') }}</span>
+              </div>
+            </div>
+            <button type="button" @click="openVersionHistory" 
+              class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              {{ t('newTopic.publishing') }}
-            </span>
-            <span v-else>{{ t('newTopic.publishNow') }}</span>
-          </button>
+              {{ t('newTopic.versionHistory') }}
+            </button>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button type="button" @click="$router.back()"
+              class="px-6 sm:px-8 py-2.5 sm:py-3.5 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 font-semibold transition-all order-2 sm:order-1">
+              {{ t('common.cancel') }}
+            </button>
+            <button type="submit" :disabled="submitting"
+              class="px-6 sm:px-10 py-2.5 sm:py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 order-1 sm:order-2">
+              <span v-if="submitting" class="inline-flex items-center gap-2">
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none">
+                  </circle>
+                  <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                  </path>
+                </svg>
+                {{ t('newTopic.publishing') }}
+              </span>
+              <span v-else>{{ t('newTopic.publishNow') }}</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -245,11 +276,18 @@
         <p class="text-xs text-gray-400 mt-3 text-center">{{ t('newTopic.uploadWaitTip') }}</p>
       </div>
     </el-dialog>
+
+    <!-- 草稿版本历史对话框 -->
+    <DraftVersionHistory 
+      v-model="showVersionHistory" 
+      :draft-id="draftId"
+      @restore="handleRestoreVersion"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useConfigStore } from '@/stores/config'
@@ -261,8 +299,9 @@ import math from '@bytemd/plugin-math'
 import 'bytemd/dist/index.css'
 import 'highlight.js/styles/github.css'
 import 'katex/dist/katex.css'
-import api, { pollApi } from '@/api'
-import { ElMessage } from 'element-plus'
+import api, { pollApi, draftApi } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import DraftVersionHistory from '@/components/DraftVersionHistory.vue'
 import { uploadImage, uploadVideo } from '@/utils/upload'
 import { getErrorI18nKey } from '@/utils/error'
 
@@ -525,6 +564,158 @@ const pollForm = ref({
   max_choices: 1,
   end_time: ''
 })
+
+const draftId = ref(null)
+const autoSaveInterval = ref(60)
+const lastSavedTime = ref(null)
+const isAutoSaving = ref(false)
+const showVersionHistory = ref(false)
+let autoSaveTimer = null
+let lastSavedContent = { title: '', content: '', forum_id: 0, tags: [] }
+
+function hasContentChanged() {
+  return (
+    form.value.title !== lastSavedContent.title ||
+    form.value.content !== lastSavedContent.content ||
+    form.value.forum_id !== lastSavedContent.forum_id ||
+    JSON.stringify(selectedTags.value) !== JSON.stringify(lastSavedContent.tags)
+  )
+}
+
+function updateLastSavedContent() {
+  lastSavedContent = {
+    title: form.value.title,
+    content: form.value.content,
+    forum_id: form.value.forum_id,
+    tags: [...selectedTags.value]
+  }
+}
+
+async function loadDraftConfig() {
+  try {
+    const config = await draftApi.getConfig()
+    autoSaveInterval.value = config.auto_save_interval || 60
+  } catch (e) {
+    console.error('Failed to load draft config:', e)
+  }
+}
+
+async function ensureDraftExists() {
+  if (draftId.value) return draftId.value
+
+  try {
+    const draft = await draftApi.createDraft({
+      title: form.value.title || t('newTopic.untitledDraft'),
+      content: form.value.content,
+      forum_id: form.value.forum_id || 0,
+      tags: []
+    })
+    draftId.value = draft.id
+    updateLastSavedContent()
+    return draft.id
+  } catch (e) {
+    console.error('Failed to create draft:', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
+    return null
+  }
+}
+
+async function saveDraft() {
+  if (!hasContentChanged()) return
+
+  isAutoSaving.value = true
+  try {
+    const id = await ensureDraftExists()
+    if (!id) return
+
+    await draftApi.updateDraft(id, {
+      title: form.value.title || t('newTopic.untitledDraft'),
+      content: form.value.content,
+      forum_id: form.value.forum_id || 0,
+      tags: selectedTags.value
+    })
+
+    await draftApi.createVersion(id, {
+      title: form.value.title || t('newTopic.untitledDraft'),
+      content: form.value.content,
+      forum_id: form.value.forum_id || 0,
+      tags: selectedTags.value
+    })
+
+    updateLastSavedContent()
+    lastSavedTime.value = new Date()
+    ElMessage.success(t('newTopic.autoSaved'))
+  } catch (e) {
+    console.error('Failed to save draft:', e)
+    ElMessage.error(t(getErrorI18nKey(e?.code)))
+  } finally {
+    isAutoSaving.value = false
+  }
+}
+
+function startAutoSave() {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer)
+  }
+
+  autoSaveTimer = setInterval(() => {
+    if (hasContentChanged()) {
+      saveDraft()
+    }
+  }, autoSaveInterval.value * 1000)
+}
+
+function stopAutoSave() {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer)
+    autoSaveTimer = null
+  }
+}
+
+function handleRestoreVersion(version) {
+  if (version) {
+    form.value.title = version.title || ''
+    form.value.content = version.content || ''
+    form.value.forum_id = version.forum_id || ''
+    
+    if (version.tags && version.tags.length > 0) {
+      selectedTags.value = version.tags
+      form.value.tag_names = version.tags
+    }
+    
+    updateLastSavedContent()
+    ElMessage.success(t('newTopic.versionRestored'))
+  }
+}
+
+function openVersionHistory() {
+  if (!draftId.value) {
+    ElMessage.warning(t('newTopic.noDraftYet'))
+    return
+  }
+  showVersionHistory.value = true
+}
+
+function formatLastSavedTime() {
+  if (!lastSavedTime.value) return ''
+  const now = new Date()
+  const diff = Math.floor((now - lastSavedTime.value) / 1000)
+  
+  if (diff < 60) {
+    return t('newTopic.justNow')
+  } else if (diff < 3600) {
+    return t('newTopic.minutesAgo', { count: Math.floor(diff / 60) })
+  } else if (diff < 86400) {
+    return t('newTopic.hoursAgo', { count: Math.floor(diff / 3600) })
+  } else {
+    return lastSavedTime.value.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+}
 
 function addPollOption() {
   if (pollForm.value.options.length < 10) {
@@ -819,6 +1010,26 @@ async function handleSubmit() {
       }
     }
 
+    if (draftId.value) {
+      try {
+        const versions = await draftApi.getVersions(draftId.value)
+        const versionsToKeep = 3
+        if (versions && versions.length > versionsToKeep) {
+          for (let i = versionsToKeep; i < versions.length; i++) {
+            try {
+              await draftApi.deleteVersion(draftId.value, versions[i].id)
+            } catch (e) {
+              console.error('Failed to delete version:', e)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to cleanup versions:', e)
+      }
+    }
+
+    stopAutoSave()
+
     ElMessage.success(t('newTopic.publishSuccess'))
     setTimeout(() => {
       router.push(`/topic/${res.id}`)
@@ -831,11 +1042,17 @@ async function handleSubmit() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadForums()
+  await loadDraftConfig()
+  startAutoSave()
   setTimeout(() => {
     editorMode.value = 'auto'
   }, 100)
+})
+
+onUnmounted(() => {
+  stopAutoSave()
 })
 
 watch(() => form.value.content, (val) => {

@@ -25,6 +25,7 @@ func AutoMigrate() {
 		&models.UserBadge{},        // 用户勋章关联表
 		&models.SiteConfig{},       // 网站配置表
 		&models.Draft{},            // 草稿箱表
+		&models.DraftVersion{},     // 草稿版本记录表
 		&models.Announcement{},     // 公告表
 		&models.VerificationCode{}, // 验证码表
 		&models.Poll{},             // 投票表

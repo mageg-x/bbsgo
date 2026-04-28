@@ -125,6 +125,15 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/drafts/{id}", handlers.UpdateDraft).Methods("PUT")    // 更新草稿
 	auth.HandleFunc("/drafts/{id}", handlers.DeleteDraft).Methods("DELETE") // 删除草稿
 
+	// 草稿版本控制操作
+	auth.HandleFunc("/drafts/config", handlers.GetDraftConfig).Methods("GET")                    // 获取草稿配置
+	auth.HandleFunc("/drafts/{id}/versions", handlers.GetDraftVersions).Methods("GET")            // 获取草稿版本列表
+	auth.HandleFunc("/drafts/{id}/versions", handlers.CreateDraftVersion).Methods("POST")         // 创建草稿版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}", handlers.GetDraftVersion).Methods("GET") // 获取单个版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}/preview", handlers.PreviewDraftVersion).Methods("GET") // 预览版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}/restore", handlers.RestoreDraftVersion).Methods("POST") // 回退版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}", handlers.DeleteDraftVersion).Methods("DELETE") // 删除版本
+
 	// 举报操作
 	auth.HandleFunc("/reports", handlers.CreateReport).Methods("POST") // 创建举报
 
@@ -337,6 +346,15 @@ func SetupAPIRoutes(api *mux.Router) {
 	auth.HandleFunc("/drafts/{id}", handlers.GetDraft).Methods("GET")       // 获取草稿详情
 	auth.HandleFunc("/drafts/{id}", handlers.UpdateDraft).Methods("PUT")    // 更新草稿
 	auth.HandleFunc("/drafts/{id}", handlers.DeleteDraft).Methods("DELETE") // 删除草稿
+
+	// 草稿版本控制操作
+	auth.HandleFunc("/drafts/config", handlers.GetDraftConfig).Methods("GET")                    // 获取草稿配置
+	auth.HandleFunc("/drafts/{id}/versions", handlers.GetDraftVersions).Methods("GET")            // 获取草稿版本列表
+	auth.HandleFunc("/drafts/{id}/versions", handlers.CreateDraftVersion).Methods("POST")         // 创建草稿版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}", handlers.GetDraftVersion).Methods("GET") // 获取单个版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}/preview", handlers.PreviewDraftVersion).Methods("GET") // 预览版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}/restore", handlers.RestoreDraftVersion).Methods("POST") // 回退版本
+	auth.HandleFunc("/drafts/{id}/versions/{version_id}", handlers.DeleteDraftVersion).Methods("DELETE") // 删除版本
 
 	// 举报操作
 	auth.HandleFunc("/reports", handlers.CreateReport).Methods("POST") // 创建举报
