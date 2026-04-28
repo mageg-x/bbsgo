@@ -41,6 +41,7 @@ export default {
     myMessages: '我的消息',
     systemNotifications: '系统通知',
     myFavorites: '我的收藏',
+    myDrafts: '草稿箱',
     logout: '退出登录',
     allForums: '全部'
   },
@@ -469,6 +470,19 @@ export default {
     cancel: '取消',
     removed: '已取消收藏',
     removeFailed: '取消收藏失败'
+  },
+  drafts: {
+    title: '草稿箱',
+    myDrafts: '我的草稿',
+    draftCount: '{count} 篇草稿',
+    noDrafts: '还没有保存的草稿',
+    createDraft: '写帖子',
+    noContent: '暂无内容',
+    untitledDraft: '未命名草稿',
+    updatedAt: '更新于 {time}',
+    versionHistory: '版本历史',
+    deleteConfirm: '确定要删除这篇草稿吗？删除后无法恢复。',
+    deleteSuccess: '草稿已删除'
   },
   search: {
     title: '搜索',
