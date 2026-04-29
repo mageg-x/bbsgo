@@ -2,16 +2,50 @@
   <div class="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 bg-white rounded-lg shadow-sm">
     <div v-if="topic" class="mb-6">
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 break-words">{{ topic.title }}</h1>
-        <button v-if="canDeleteTopic" @click="handleDeleteTopic"
-          class="flex items-center space-x-1 px-3 py-1.5 text-sm text-red-600 hover:text-white hover:bg-red-500 border border-red-300 rounded-lg transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-            </path>
-          </svg>
-          <span>{{ t('common.delete') }}</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-bold text-gray-900 break-words">{{ topic.title }}</h1>
+          <span v-if="topic.is_private && !topic.private_ended"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+              </path>
+            </svg>
+            私密中
+            <span v-if="topic.private_expire_at" class="ml-1 text-yellow-600">
+              (剩余 {{ getPrivateRemainingTime(topic.private_expire_at) }})
+            </span>
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button v-if="isTopicAuthor && topic.is_private && !topic.private_ended" @click="showExtendPrivateDialog"
+            class="flex items-center space-x-1 px-3 py-1.5 text-sm text-blue-600 hover:text-white hover:bg-blue-500 border border-blue-300 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+              </path>
+            </svg>
+            <span>延长</span>
+          </button>
+          <button v-if="isTopicAuthor && topic.is_private && !topic.private_ended" @click="handleUnlockPrivate"
+            class="flex items-center space-x-1 px-3 py-1.5 text-sm text-green-600 hover:text-white hover:bg-green-500 border border-green-300 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z">
+              </path>
+            </svg>
+            <span>解禁</span>
+          </button>
+          <button v-if="canDeleteTopic" @click="handleDeleteTopic"
+            class="flex items-center space-x-1 px-3 py-1.5 text-sm text-red-600 hover:text-white hover:bg-red-500 border border-red-300 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+              </path>
+            </svg>
+            <span>{{ t('common.delete') }}</span>
+          </button>
+        </div>
       </div>
       <div v-if="topic.tags && topic.tags.length > 0" class="flex items-center flex-wrap gap-2 mb-4">
         <router-link v-for="tag in topic.tags" :key="tag.id" :to="`/?tag=${tag.id}`"
@@ -346,6 +380,37 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 延长私密时长对话框 -->
+    <el-dialog v-model="extendPrivateDialogVisible" title="延长私密时长" width="420px" :close-on-click-modal="false">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-500">选择要延长的时长，帖子将继续保持私密状态。</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">延长时长</label>
+            <el-input-number v-model="extendPrivateForm.duration" :min="1" :max="999" class="w-full" />
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">时间单位</label>
+            <el-select v-model="extendPrivateForm.unit" class="w-full">
+              <el-option label="秒" value="second" />
+              <el-option label="分钟" value="minute" />
+              <el-option label="小时" value="hour" />
+              <el-option label="天" value="day" />
+            </el-select>
+          </div>
+        </div>
+        <div v-if="extendPrivateForm.duration > 0" class="p-3 bg-blue-50 rounded-lg">
+          <p class="text-sm text-blue-700">
+            私密时长将延长 <span class="font-semibold">{{ extendPrivateForm.duration }} {{ getPrivateUnitText(extendPrivateForm.unit) }}</span>
+          </p>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="extendPrivateDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleExtendPrivate" :loading="extendingPrivate">确认延长</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -403,11 +468,23 @@ const shareUrl = ref('')
 const copied = ref(false)
 const qrcodeVisible = ref(false)
 
+const isTopicAuthor = computed(() => {
+  if (!userStore.isLoggedIn || !topic.value) return false
+  return topic.value.user_id === userStore.user?.id
+})
+
 const hasVoted = computed(() => hasVotedFromServer.value || votedOptionIds.value.length > 0)
 const isPollEnded = computed(() => {
   if (!poll.value?.end_time) return false
   return new Date(poll.value.end_time) < new Date()
 })
+
+const extendPrivateDialogVisible = ref(false)
+const extendPrivateForm = ref({
+  duration: 1,
+  unit: 'hour'
+})
+const extendingPrivate = ref(false)
 
 // 作者勋章展示（取前3个，按优先级排序）
 const displayAuthorBadges = computed(() => {
@@ -738,6 +815,96 @@ function formatTime(time) {
   if (diff < 3600000) return t('topic.minutesAgo', { minutes: Math.floor(diff / 60000) })
   if (diff < 86400000) return t('topic.hoursAgo', { hours: Math.floor(diff / 3600000) })
   return t('topic.daysAgo', { days: Math.floor(diff / 86400000) })
+}
+
+function getPrivateRemainingTime(endTime) {
+  const end = new Date(endTime)
+  const now = new Date()
+  const diff = end - now
+
+  if (diff <= 0) return '已过期'
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+  if (days > 0) return `${days}天 ${hours}小时`
+  if (hours > 0) return `${hours}小时 ${minutes}分钟`
+  if (minutes > 0) return `${minutes}分钟 ${seconds}秒`
+  return `${seconds}秒`
+}
+
+function getPrivateUnitText(unit) {
+  const unitMap = {
+    second: '秒',
+    minute: '分钟',
+    hour: '小时',
+    day: '天'
+  }
+  return unitMap[unit] || unit
+}
+
+function showExtendPrivateDialog() {
+  extendPrivateForm.value = {
+    duration: 1,
+    unit: 'hour'
+  }
+  extendPrivateDialogVisible.value = true
+}
+
+async function handleUnlockPrivate() {
+  try {
+    await ElMessageBox.confirm(
+      '确定要提前解禁此帖子吗？解禁后帖子将变为公开状态，所有人都可以查看、回复。',
+      '解禁确认',
+      { confirmButtonText: '确认解禁', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await topicApi.unlockPrivate(topic.value.id)
+    topic.value.is_private = false
+    topic.value.private_ended = true
+    ElMessage.success('帖子已解禁')
+  } catch (e) {
+    console.error('解禁失败', e)
+    if (e.code) {
+      ElMessage.error(t(getErrorI18nKey(e.code)))
+    } else {
+      ElMessage.error('解禁失败')
+    }
+  }
+}
+
+async function handleExtendPrivate() {
+  if (extendPrivateForm.value.duration < 1) {
+    ElMessage.warning('请输入有效的时长')
+    return
+  }
+
+  extendingPrivate.value = true
+  try {
+    await topicApi.extendPrivate(
+      topic.value.id,
+      extendPrivateForm.value.duration,
+      extendPrivateForm.value.unit
+    )
+    extendPrivateDialogVisible.value = false
+    ElMessage.success('私密时长已延长')
+    await loadTopic()
+  } catch (e) {
+    console.error('延长私密时长失败', e)
+    if (e.code) {
+      ElMessage.error(t(getErrorI18nKey(e.code)))
+    } else {
+      ElMessage.error('延长私密时长失败')
+    }
+  } finally {
+    extendingPrivate.value = false
+  }
 }
 
 async function loadTopic() {

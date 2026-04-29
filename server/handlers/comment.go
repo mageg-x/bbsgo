@@ -192,6 +192,19 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 检查话题是否处于私密状态（私密状态下不允许评论，除非是作者或管理员）
+	if topic.IsPrivateActive() {
+		if topic.UserID != userID {
+			// 检查是否是管理员
+			var user models.User
+			if err := database.DB.First(&user, userID).Error; err != nil || user.Role < 1 {
+				log.Printf("create comment: private topic, comment not allowed, topicID: %d", topicID)
+				errors.Error(w, errors.CodeCommentDisabled, "私密话题不允许评论")
+				return
+			}
+		}
+	}
+
 	// 防刷检查
 	antispamMiddleware := antispam.GetAntiSpamMiddleware()
 	checkResult := antispamMiddleware.CheckCommentCreate(userID, req.Content)

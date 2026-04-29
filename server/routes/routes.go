@@ -79,10 +79,12 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/user/reports", handlers.GetUserReports).Methods("GET")        // 获取我的举报
 
 	// 话题操作
-	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")          // 创建话题
-	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")      // 更新话题
-	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")   // 删除话题
-	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT") // 作者置顶/取消置顶
+	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")                    // 创建话题
+	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")                // 更新话题
+	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")             // 删除话题
+	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT")           // 作者置顶/取消置顶
+	auth.HandleFunc("/topics/{id}/unlock-private", handlers.UnlockPrivateTopic).Methods("POST") // 手动解禁私密话题
+	auth.HandleFunc("/topics/{id}/extend-private", handlers.ExtendPrivateTopic).Methods("POST") // 延长私密时长
 
 	// 评论操作
 	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                      // 创建评论
@@ -292,10 +294,12 @@ func SetupAPIRoutes(api *mux.Router) {
 	auth.HandleFunc("/user/reports", handlers.GetUserReports).Methods("GET")        // 获取我的举报
 
 	// 话题操作
-	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")          // 创建话题
-	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")      // 更新话题
-	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")   // 删除话题
-	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT") // 作者置顶/取消置顶
+	auth.HandleFunc("/topics", handlers.CreateTopic).Methods("POST")                    // 创建话题
+	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")                // 更新话题
+	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")             // 删除话题
+	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT")           // 作者置顶/取消置顶
+	auth.HandleFunc("/topics/{id}/unlock-private", handlers.UnlockPrivateTopic).Methods("POST") // 手动解禁私密话题
+	auth.HandleFunc("/topics/{id}/extend-private", handlers.ExtendPrivateTopic).Methods("POST") // 延长私密时长
 
 	// 评论操作
 	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                      // 创建评论

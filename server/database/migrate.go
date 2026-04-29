@@ -56,6 +56,8 @@ func createCompositeIndexes() {
 	DB.Exec("CREATE INDEX IF NOT EXISTS idx_topic_pinned_hot ON topics(is_pinned DESC, (like_count + reply_count * 2) DESC)")
 	DB.Exec("CREATE INDEX IF NOT EXISTS idx_topic_pinned_reply ON topics(is_pinned DESC, last_reply_at DESC)")
 	DB.Exec("CREATE INDEX IF NOT EXISTS idx_topic_user_created ON topics(user_id, created_at DESC)")
+	// 时效隐私索引
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_topic_private_expire ON topics(is_private, private_ended, private_expire_at)")
 
 	// Comment 表索引
 	DB.Exec("CREATE INDEX IF NOT EXISTS idx_comment_topic_created ON comments(topic_id, created_at DESC)")

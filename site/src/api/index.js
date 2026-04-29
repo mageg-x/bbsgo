@@ -48,6 +48,8 @@ export const commentApi = {
 export const topicApi = {
   deleteTopic: (id) => api.delete(`/topics/${id}`),
   pinTopic: (id, pinned) => api.put(`/topics/${id}/pin`, { pinned }),
+  unlockPrivate: (id) => api.post(`/topics/${id}/unlock-private`),
+  extendPrivate: (id, duration, unit) => api.post(`/topics/${id}/extend-private`, { duration, unit }),
 }
 
 export const commentPinApi = {

@@ -31,9 +31,50 @@ type Topic struct {
 	UpdatedAt    time.Time      `json:"updated_at"`                           // 更新时间
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`                       // 软删除时间
 
+	// 时效隐私配置
+	IsPrivate         bool       `gorm:"default:false;index" json:"is_private"`           // 是否私密
+	PrivateExpireAt   *time.Time `gorm:"index" json:"private_expire_at"`                  // 私密过期时间
+	PrivateDuration   int64      `gorm:"default:0" json:"private_duration"`               // 私密时长（秒）
+	PrivateUnit       string     `gorm:"size:20;default:'second'" json:"private_unit"`    // 时长单位：second, minute, hour, day
+	PrivateEnded      bool       `gorm:"default:false;index" json:"private_ended"`        // 私密是否已结束（用于快速查询）
+
 	// 关联关系
 	Comments  []Comment  `gorm:"foreignKey:TopicID" json:"-"`      // 话题下的所有评论
 	Likes     []Like     `gorm:"foreignKey:TargetID" json:"-"`      // 话题的点赞记录
 	Favorites []Favorite `gorm:"foreignKey:TopicID" json:"-"`       // 话题的收藏记录
 	Tags      []Tag      `gorm:"many2many:topic_tags;" json:"tags"` // 话题关联的标签
+}
+
+// IsPrivateActive 检查帖子是否处于私密状态且未过期
+func (t *Topic) IsPrivateActive() bool {
+	if !t.IsPrivate || t.PrivateEnded {
+		return false
+	}
+	if t.PrivateExpireAt == nil {
+		return t.IsPrivate
+	}
+	return time.Now().Before(*t.PrivateExpireAt)
+}
+
+// CalculatePrivateExpireAt 根据时长和单位计算过期时间
+func (t *Topic) CalculatePrivateExpireAt(duration int64, unit string) *time.Time {
+	if duration <= 0 {
+		return nil
+	}
+	
+	now := time.Now()
+	var d time.Duration
+	switch unit {
+	case "minute":
+		d = time.Minute * time.Duration(duration)
+	case "hour":
+		d = time.Hour * time.Duration(duration)
+	case "day":
+		d = time.Hour * 24 * time.Duration(duration)
+	default: // second
+		d = time.Second * time.Duration(duration)
+	}
+	
+	expireAt := now.Add(d)
+	return &expireAt
 }

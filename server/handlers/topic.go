@@ -37,12 +37,15 @@ func GetTopics(w http.ResponseWriter, r *http.Request) {
 		pageSize = 20
 	}
 
-	// 构建缓存 key（基于查询参数）
-	cacheKey := cache.BuildKey(cache.TopicListPrefix, fmt.Sprintf("%d:%d:%s:%d:%d", forumID, tagID, sort, page, pageSize))
+	// 获取当前用户ID（用于私密帖子过滤）
+	userID, _ := middleware.GetUserIDFromContext(r.Context())
+
+	// 构建缓存 key（基于查询参数和用户ID，因为私密帖子对不同用户可见性不同）
+	cacheKey := cache.BuildKey(cache.TopicListPrefix, fmt.Sprintf("%d:%d:%s:%d:%d:%d", forumID, tagID, sort, page, pageSize, userID))
 
 	// 尝试从缓存获取
 	data, err := cache.GetData(cacheKey, func() (interface{}, error) {
-		return fetchTopics(forumID, tagID, sort, page, pageSize)
+		return fetchTopics(forumID, tagID, sort, page, pageSize, userID)
 	}, cache.TopicListExpire)
 
 	if err != nil {
@@ -54,12 +57,22 @@ func GetTopics(w http.ResponseWriter, r *http.Request) {
 }
 
 // fetchTopics 获取话题列表核心逻辑
-func fetchTopics(forumID, tagID int, sort string, page, pageSize int) (map[string]interface{}, error) {
+func fetchTopics(forumID, tagID int, sort string, page, pageSize int, currentUserID uint) (map[string]interface{}, error) {
 	var topics []models.Topic
 	var total int64
 
+	// 构建查询条件：过滤活跃的私密帖子（仅作者和管理员可见）
+	// 条件：非私密 或 已结束私密 或 是自己的帖子
+	now := time.Now()
+	privateCondition := "(is_private = ? OR private_ended = ? OR (is_private = ? AND (private_expire_at IS NULL OR private_expire_at < ?)))"
+	if currentUserID > 0 {
+		// 已登录用户可以看到自己的私密帖子
+		privateCondition = fmt.Sprintf("(%s OR user_id = %d)", privateCondition, currentUserID)
+	}
+
 	// 构建查询
-	query := database.DB.Model(&models.Topic{})
+	query := database.DB.Model(&models.Topic{}).
+		Where(privateCondition, false, true, true, now)
 	if forumID > 0 {
 		query = query.Where("forum_id = ?", forumID)
 	}
@@ -77,7 +90,8 @@ func fetchTopics(forumID, tagID int, sort string, page, pageSize int) (map[strin
 	offset := (page - 1) * pageSize
 
 	// 构建查询
-	dbQuery := database.DB.Preload("User").Preload("Forum").Preload("Tags")
+	dbQuery := database.DB.Preload("User").Preload("Forum").Preload("Tags").
+		Where(privateCondition, false, true, true, now)
 	if forumID > 0 {
 		dbQuery = dbQuery.Where("forum_id = ?", forumID)
 	}
@@ -188,6 +202,25 @@ func GetTopic(w http.ResponseWriter, r *http.Request) {
 
 	topic := data.(models.Topic)
 
+	// 检查私密权限
+	if topic.IsPrivateActive() {
+		userID, ok := middleware.GetUserIDFromContext(r.Context())
+		if !ok || (topic.UserID != userID) {
+			// 检查是否是管理员
+			if ok {
+				var user models.User
+				if err := database.DB.First(&user, userID).Error; err == nil && user.Role >= 1 {
+					// 管理员可以查看
+					goto allowAccess
+				}
+			}
+			log.Printf("get topic: private topic access denied, id: %d", id)
+			errors.Error(w, errors.CodeTopicNotFound, "话题不存在或无权访问")
+			return
+		}
+	}
+allowAccess:
+
 	// 增加浏览数（异步更新）
 	go func(topicID uint) {
 		database.DB.Model(&models.Topic{}).Where("id = ?", topicID).
@@ -225,10 +258,13 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 
 	// 解析请求体
 	var req struct {
-		Title    string   `json:"title"`     // 话题标题
-		Content  string   `json:"content"`   // 话题内容
-		ForumID  uint     `json:"forum_id"`  // 版块ID
-		TagNames []string `json:"tag_names"` // 标签名称列表
+		Title           string   `json:"title"`            // 话题标题
+		Content         string   `json:"content"`          // 话题内容
+		ForumID         uint     `json:"forum_id"`         // 版块ID
+		TagNames        []string `json:"tag_names"`        // 标签名称列表
+		IsPrivate       bool     `json:"is_private"`       // 是否私密
+		PrivateDuration int64    `json:"private_duration"` // 私密时长
+		PrivateUnit     string   `json:"private_unit"`     // 时长单位：second, minute, hour, day
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create topic: failed to decode request body, error: %v", err)
@@ -295,12 +331,25 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 
 	// 创建话题
 	topic := models.Topic{
-		Title:        req.Title,
-		Content:      req.Content,
-		UserID:       userID,
-		ForumID:      req.ForumID,
-		AllowComment: true,           // 默认允许评论
-		Tags:         []models.Tag{}, // 初始化 Tags 为空切片，避免 nil 导致的空指针异常
+		Title:           req.Title,
+		Content:         req.Content,
+		UserID:          userID,
+		ForumID:         req.ForumID,
+		AllowComment:    true,           // 默认允许评论
+		Tags:            []models.Tag{}, // 初始化 Tags 为空切片，避免 nil 导致的空指针异常
+		IsPrivate:       req.IsPrivate,
+		PrivateDuration: req.PrivateDuration,
+		PrivateUnit:     req.PrivateUnit,
+	}
+	
+	// 如果设置了私密且有时长，计算过期时间
+	if req.IsPrivate && req.PrivateDuration > 0 {
+		topic.PrivateExpireAt = topic.CalculatePrivateExpireAt(req.PrivateDuration, req.PrivateUnit)
+	}
+	
+	// 私密帖子默认禁止评论
+	if req.IsPrivate {
+		topic.AllowComment = false
 	}
 
 	if err := database.DB.Create(&topic).Error; err != nil {
@@ -585,4 +634,169 @@ func UserPinTopic(w http.ResponseWriter, r *http.Request) {
 		"id":             topic.ID,
 		"is_user_pinned": req.Pinned,
 	})
+}
+
+// UnlockPrivateTopic 手动解禁私密话题处理器
+// 作者可以提前结束私密状态
+func UnlockPrivateTopic(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		log.Printf("unlock private topic: user not authenticated")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
+		return
+	}
+
+	vars := mux.Vars(r)
+	id, _ := strconv.Atoi(vars["id"])
+
+	// 查询话题
+	var topic models.Topic
+	if err := database.DB.First(&topic, id).Error; err != nil {
+		log.Printf("unlock private topic: topic not found, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeTopicNotFound, "")
+		return
+	}
+
+	// 验证权限：仅作者可以操作
+	if topic.UserID != userID {
+		log.Printf("unlock private topic: permission denied, topicID: %d, userID: %d", id, userID)
+		errors.Error(w, errors.CodeNoPermission, "")
+		return
+	}
+
+	// 检查是否是私密状态
+	if !topic.IsPrivate {
+		errors.Error(w, errors.CodeInvalidParams, "该话题不是私密状态")
+		return
+	}
+
+	if topic.PrivateEnded {
+		errors.Error(w, errors.CodeInvalidParams, "该私密话题已过期或已解禁")
+		return
+	}
+
+	// 更新私密状态
+	updates := map[string]interface{}{
+		"is_private":    false,
+		"private_ended": true,
+		"allow_comment": true, // 解禁后允许评论
+	}
+
+	if err := database.DB.Model(&topic).Updates(updates).Error; err != nil {
+		log.Printf("unlock private topic: failed to update topic, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeServerInternal, "")
+		return
+	}
+
+	log.Printf("unlock private topic: topic unlocked, id: %d", id)
+	errors.Success(w, map[string]interface{}{
+		"id":          topic.ID,
+		"is_private":  false,
+		"private_ended": true,
+	})
+
+	// 清除缓存
+	cache.TopicCache.Invalidate(topic.ID)
+	cache.HomePageCache.InvalidateTopics()
+}
+
+// ExtendPrivateTopic 延长私密时长处理器
+// 作者可以延长私密话题的时长
+func ExtendPrivateTopic(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		log.Printf("extend private topic: user not authenticated")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
+		return
+	}
+
+	vars := mux.Vars(r)
+	id, _ := strconv.Atoi(vars["id"])
+
+	// 查询话题
+	var topic models.Topic
+	if err := database.DB.First(&topic, id).Error; err != nil {
+		log.Printf("extend private topic: topic not found, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeTopicNotFound, "")
+		return
+	}
+
+	// 验证权限：仅作者可以操作
+	if topic.UserID != userID {
+		log.Printf("extend private topic: permission denied, topicID: %d, userID: %d", id, userID)
+		errors.Error(w, errors.CodeNoPermission, "")
+		return
+	}
+
+	// 检查是否是私密状态
+	if !topic.IsPrivate {
+		errors.Error(w, errors.CodeInvalidParams, "该话题不是私密状态")
+		return
+	}
+
+	if topic.PrivateEnded {
+		errors.Error(w, errors.CodeInvalidParams, "该私密话题已过期或已解禁")
+		return
+	}
+
+	// 解析请求体
+	var req struct {
+		Duration int64  `json:"duration"` // 延长的时长
+		Unit     string `json:"unit"`     // 时长单位：second, minute, hour, day
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("extend private topic: failed to decode request body, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeInvalidParams, "")
+		return
+	}
+
+	if req.Duration <= 0 {
+		errors.Error(w, errors.CodeInvalidParams, "延时时长必须大于0")
+		return
+	}
+
+	// 计算新的过期时间
+	var newExpireAt time.Time
+	if topic.PrivateExpireAt != nil && time.Now().Before(*topic.PrivateExpireAt) {
+		// 在原有过期时间基础上延长
+		newExpireAt = *topic.PrivateExpireAt
+	} else {
+		// 如果已过期或没有设置过期时间，从现在开始计算
+		newExpireAt = time.Now()
+	}
+
+	// 添加延时时长
+	switch req.Unit {
+	case "minute":
+		newExpireAt = newExpireAt.Add(time.Minute * time.Duration(req.Duration))
+	case "hour":
+		newExpireAt = newExpireAt.Add(time.Hour * time.Duration(req.Duration))
+	case "day":
+		newExpireAt = newExpireAt.Add(time.Hour * 24 * time.Duration(req.Duration))
+	default: // second
+		newExpireAt = newExpireAt.Add(time.Second * time.Duration(req.Duration))
+	}
+
+	// 更新私密状态
+	updates := map[string]interface{}{
+		"private_expire_at": newExpireAt,
+		"private_ended":     false,
+	}
+
+	if err := database.DB.Model(&topic).Updates(updates).Error; err != nil {
+		log.Printf("extend private topic: failed to update topic, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeServerInternal, "")
+		return
+	}
+
+	log.Printf("extend private topic: topic extended, id: %d, new expire at: %v", id, newExpireAt)
+	errors.Success(w, map[string]interface{}{
+		"id":                topic.ID,
+		"is_private":        true,
+		"private_expire_at": newExpireAt,
+		"private_ended":     false,
+	})
+
+	// 清除缓存
+	cache.TopicCache.Invalidate(topic.ID)
 }

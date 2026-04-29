@@ -7,6 +7,7 @@ import (
 	"bbsgo/fileserver"
 	"bbsgo/routes"
 	"bbsgo/seed"
+	"bbsgo/services"
 	"context"
 	"flag"
 	"log"
@@ -37,6 +38,8 @@ func Init() {
 	cache.Init()
 	config.InitConfigCache()
 	seed.Init()
+	// 启动私密帖子定时任务调度器
+	services.StartPrivateTopicScheduler()
 }
 
 // SetupRouter 设置路由

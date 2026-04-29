@@ -69,6 +69,48 @@
           </div>
         </div>
 
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <label class="text-gray-800 text-sm font-semibold">私密发布</label>
+            <button type="button" @click="form.is_private = !form.is_private"
+              :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors', form.is_private ? 'bg-blue-500' : 'bg-gray-200']">
+              <span
+                :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform', form.is_private ? 'translate-x-6' : 'translate-x-1']"></span>
+            </button>
+          </div>
+
+          <div v-if="form.is_private" class="space-y-4 pt-4 border-t border-gray-100">
+            <p class="text-sm text-gray-500 mb-3">私密发布后，帖子仅您可见，到期后自动转为公开。时效内禁止被检索、浏览、回复。</p>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-gray-700 text-sm font-medium mb-2">私密时长</label>
+                <el-input-number v-model="form.private_duration" :min="1" :max="999" class="w-full" />
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-medium mb-2">时间单位</label>
+                <el-select v-model="form.private_unit" class="w-full">
+                  <el-option label="秒" value="second" />
+                  <el-option label="分钟" value="minute" />
+                  <el-option label="小时" value="hour" />
+                  <el-option label="天" value="day" />
+                </el-select>
+              </div>
+            </div>
+
+            <div v-if="form.private_duration > 0" class="p-3 bg-blue-50 rounded-lg">
+              <p class="text-sm text-blue-700">
+                帖子将在 <span class="font-semibold">{{ form.private_duration }} {{ getPrivateUnitText(form.private_unit) }}</span> 后自动转为公开
+              </p>
+            </div>
+            <div v-else class="p-3 bg-yellow-50 rounded-lg">
+              <p class="text-sm text-yellow-700">
+                ⚠️ 未设置时长，帖子将一直保持私密状态，需手动解禁
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div v-if="configStore.state.allow_poll" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           <div class="flex items-center justify-between mb-4">
             <label class="text-gray-800 text-sm font-semibold">{{ t('newTopic.addPoll') }}</label>
@@ -500,7 +542,10 @@ const form = ref({
   title: '',
   content: '',
   forum_id: '',
-  tag_names: []
+  tag_names: [],
+  is_private: false,
+  private_duration: 0,
+  private_unit: 'hour'
 })
 const forums = ref([])
 const selectedTags = ref([])
@@ -761,6 +806,16 @@ function navigateSuggestion(direction) {
   if (newIndex >= 0 && newIndex < suggestions.value.length) {
     suggestionIndex.value = newIndex
   }
+}
+
+function getPrivateUnitText(unit) {
+  const unitMap = {
+    second: '秒',
+    minute: '分钟',
+    hour: '小时',
+    day: '天'
+  }
+  return unitMap[unit] || unit
 }
 
 async function handleSubmit() {
