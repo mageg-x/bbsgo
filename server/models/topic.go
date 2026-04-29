@@ -6,6 +6,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// AnonymousType 匿名类型
+type AnonymousType string
+
+const (
+	AnonymousTypePermanent AnonymousType = "permanent" // 永久匿名
+	AnonymousTypeTimed   AnonymousType = "timed"   // 定时匿名
+)
+
 // Topic 话题/帖子模型
 // 论坛中的主帖子，每个话题可以有多个回复帖子
 type Topic struct {
@@ -31,9 +39,31 @@ type Topic struct {
 	UpdatedAt    time.Time      `json:"updated_at"`                           // 更新时间
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`                       // 软删除时间
 
+	// 匿名相关字段
+	IsAnonymous     bool          `gorm:"default:false;index" json:"is_anonymous"`       // 是否匿名
+	AnonymousType   AnonymousType `gorm:"size:20;default:'permanent'" json:"anonymous_type"` // 匿名类型：permanent永久, timed定时
+	AnonymousUntil *time.Time    `json:"anonymous_until"`                                   // 定时匿名的解匿时间
+	IsAnonymousEnded bool        `gorm:"default:false" json:"is_anonymous_ended"`           // 匿名是否已结束（手动关闭或定时解匿）
+
 	// 关联关系
 	Comments  []Comment  `gorm:"foreignKey:TopicID" json:"-"`      // 话题下的所有评论
 	Likes     []Like     `gorm:"foreignKey:TargetID" json:"-"`      // 话题的点赞记录
 	Favorites []Favorite `gorm:"foreignKey:TopicID" json:"-"`       // 话题的收藏记录
 	Tags      []Tag      `gorm:"many2many:topic_tags;" json:"tags"` // 话题关联的标签
+}
+
+// IsCurrentlyAnonymous 检查当前是否处于匿名状态
+func (t *Topic) IsCurrentlyAnonymous() bool {
+	if !t.IsAnonymous {
+		return false
+	}
+	if t.IsAnonymousEnded {
+		return false
+	}
+	if t.AnonymousType == AnonymousTypeTimed && t.AnonymousUntil != nil {
+		if time.Now().After(*t.AnonymousUntil) {
+			return false
+		}
+	}
+	return true
 }

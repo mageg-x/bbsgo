@@ -7,6 +7,7 @@ import (
 	"bbsgo/fileserver"
 	"bbsgo/routes"
 	"bbsgo/seed"
+	"bbsgo/utils"
 	"context"
 	"flag"
 	"log"
@@ -37,6 +38,9 @@ func Init() {
 	cache.Init()
 	config.InitConfigCache()
 	seed.Init()
+
+	// 启动匿名清理定时任务
+	utils.StartAnonymityCleanupTask()
 }
 
 // SetupRouter 设置路由

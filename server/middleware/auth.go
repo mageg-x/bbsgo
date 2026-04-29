@@ -193,3 +193,19 @@ func GetOptionalUserID(r *http.Request) uint {
 
 	return claims.UserID
 }
+
+// GetOptionalUserInfo 从请求中获取用户信息（不强制认证）
+// 返回: 用户ID、用户角色、是否登录成功
+func GetOptionalUserInfo(r *http.Request) (userID uint, role int, isLoggedIn bool) {
+	userID = GetOptionalUserID(r)
+	if userID == 0 {
+		return 0, 0, false
+	}
+
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return 0, 0, false
+	}
+
+	return userID, user.Role, true
+}

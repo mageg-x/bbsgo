@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -308,7 +309,7 @@ func GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 
 func GetUserTopics(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userID, _ := strconv.Atoi(vars["id"])
+	targetUserID, _ := strconv.Atoi(vars["id"])
 
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -320,37 +321,104 @@ func GetUserTopics(w http.ResponseWriter, r *http.Request) {
 	var topics []models.Topic
 	var total int64
 
-	database.DB.Model(&models.Topic{}).Where("user_id = ?", userID).Count(&total)
+	database.DB.Model(&models.Topic{}).Where("user_id = ?", targetUserID).Count(&total)
 
-	if err := database.DB.Where("user_id = ?", userID).
+	if err := database.DB.Where("user_id = ?", targetUserID).
 		Preload("User").Preload("Forum").
 		Order("created_at DESC").
 		Offset(offset).Limit(pageSize).
 		Find(&topics).Error; err != nil {
-		log.Printf("get user topics: failed to query topics, userID: %d, error: %v", userID, err)
+		log.Printf("get user topics: failed to query topics, userID: %d, error: %v", targetUserID, err)
 		errors.Error(w, errors.CodeServerInternal, "")
 		return
 	}
 
 	// 查询用户的勋章
 	var userBadges []models.UserBadge
-	if err := database.DB.Where("user_id = ? AND is_revoked = ?", userID, false).
+	if err := database.DB.Where("user_id = ? AND is_revoked = ?", targetUserID, false).
 		Preload("Badge").
 		Find(&userBadges).Error; err != nil {
-		log.Printf("get user topics: failed to query user badges, userID: %d, error: %v", userID, err)
+		log.Printf("get user topics: failed to query user badges, userID: %d, error: %v", targetUserID, err)
 	}
 
-	// 为每个话题添加 author_badges
-	type TopicWithBadges struct {
-		models.Topic
-		AuthorBadges []models.UserBadge `json:"author_badges"`
+	// 获取当前查看者信息（用于匿名判断）
+	viewerID, viewerRole, _ := middleware.GetOptionalUserInfo(r)
+
+	// 为每个话题添加 author_badges 并处理匿名
+	type ProcessedTopic struct {
+		ID               uint                 `json:"id"`
+		Title            string               `json:"title"`
+		Content          string               `json:"content"`
+		UserID           uint                 `json:"user_id"`
+		User             interface{}          `json:"user"`
+		ForumID          uint                 `json:"forum_id"`
+		Forum            models.Forum         `json:"forum"`
+		IsPinned         bool                 `json:"is_pinned"`
+		IsUserPinned     bool                 `json:"is_user_pinned"`
+		IsLocked         bool                 `json:"is_locked"`
+		IsEssence        bool                 `json:"is_essence"`
+		IsHidden         bool                 `json:"is_hidden"`
+		HotScore         float64              `json:"hot_score"`
+		LikeCount        int                  `json:"like_count"`
+		ViewCount        int                  `json:"view_count"`
+		ReplyCount       int                  `json:"reply_count"`
+		LastReplyAt      *time.Time           `json:"last_reply_at"`
+		AllowComment     bool                 `json:"allow_comment"`
+		CreatedAt        time.Time            `json:"created_at"`
+		UpdatedAt        time.Time            `json:"updated_at"`
+		IsAnonymous      bool                 `json:"is_anonymous"`
+		AnonymousType    models.AnonymousType `json:"anonymous_type"`
+		AnonymousUntil   *time.Time           `json:"anonymous_until"`
+		IsAnonymousEnded bool                 `json:"is_anonymous_ended"`
+		AuthorBadges     interface{}          `json:"author_badges"`
+		Tags             []models.Tag         `json:"tags"`
 	}
-	response := make([]TopicWithBadges, len(topics))
+
+	response := make([]ProcessedTopic, len(topics))
 	for i, t := range topics {
-		response[i] = TopicWithBadges{Topic: t}
-		if t.UserID == uint(userID) {
-			response[i].AuthorBadges = userBadges
+		shouldShowAnonymous := utils.ShouldShowAnonymous(viewerID, t.UserID, viewerRole, &t)
+
+		item := ProcessedTopic{
+			ID:               t.ID,
+			Title:            t.Title,
+			Content:          t.Content,
+			UserID:           t.UserID,
+			ForumID:          t.ForumID,
+			Forum:            t.Forum,
+			IsPinned:         t.IsPinned,
+			IsUserPinned:     t.IsUserPinned,
+			IsLocked:         t.IsLocked,
+			IsEssence:        t.IsEssence,
+			IsHidden:         t.IsHidden,
+			HotScore:         t.HotScore,
+			LikeCount:        t.LikeCount,
+			ViewCount:        t.ViewCount,
+			ReplyCount:       t.ReplyCount,
+			LastReplyAt:      t.LastReplyAt,
+			AllowComment:     t.AllowComment,
+			CreatedAt:        t.CreatedAt,
+			UpdatedAt:        t.UpdatedAt,
+			IsAnonymous:      t.IsAnonymous,
+			AnonymousType:    t.AnonymousType,
+			AnonymousUntil:   t.AnonymousUntil,
+			IsAnonymousEnded: t.IsAnonymousEnded,
+			Tags:             t.Tags,
 		}
+
+		if shouldShowAnonymous {
+			item.User = utils.GetAnonymousUserInfo()
+			item.AuthorBadges = []models.UserBadge{}
+			item.UserID = 0
+		} else {
+			item.User = t.User
+			if t.UserID == uint(targetUserID) {
+				item.AuthorBadges = userBadges
+			} else {
+				item.AuthorBadges = []models.UserBadge{}
+			}
+		}
+
+		response[i] = item
 	}
 
 	errors.Success(w, map[string]interface{}{
@@ -404,8 +472,86 @@ func GetFollowTopics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 获取当前查看者信息（用于匿名判断）
+	// 获取当前用户角色
+	var currentUser models.User
+	viewerRole := 0
+	if err := database.DB.First(&currentUser, userID).Error; err == nil {
+		viewerRole = currentUser.Role
+	}
+
+	// 处理匿名数据
+	type ProcessedTopic struct {
+		ID               uint                 `json:"id"`
+		Title            string               `json:"title"`
+		Content          string               `json:"content"`
+		UserID           uint                 `json:"user_id"`
+		User             interface{}          `json:"user"`
+		ForumID          uint                 `json:"forum_id"`
+		Forum            models.Forum         `json:"forum"`
+		IsPinned         bool                 `json:"is_pinned"`
+		IsUserPinned     bool                 `json:"is_user_pinned"`
+		IsLocked         bool                 `json:"is_locked"`
+		IsEssence        bool                 `json:"is_essence"`
+		IsHidden         bool                 `json:"is_hidden"`
+		HotScore         float64              `json:"hot_score"`
+		LikeCount        int                  `json:"like_count"`
+		ViewCount        int                  `json:"view_count"`
+		ReplyCount       int                  `json:"reply_count"`
+		LastReplyAt      *time.Time           `json:"last_reply_at"`
+		AllowComment     bool                 `json:"allow_comment"`
+		CreatedAt        time.Time            `json:"created_at"`
+		UpdatedAt        time.Time            `json:"updated_at"`
+		IsAnonymous      bool                 `json:"is_anonymous"`
+		AnonymousType    models.AnonymousType `json:"anonymous_type"`
+		AnonymousUntil   *time.Time           `json:"anonymous_until"`
+		IsAnonymousEnded bool                 `json:"is_anonymous_ended"`
+		Tags             []models.Tag         `json:"tags"`
+	}
+
+	var processedList []ProcessedTopic
+	for _, t := range topics {
+		shouldShowAnonymous := utils.ShouldShowAnonymous(userID, t.UserID, viewerRole, &t)
+
+		item := ProcessedTopic{
+			ID:               t.ID,
+			Title:            t.Title,
+			Content:          t.Content,
+			UserID:           t.UserID,
+			ForumID:          t.ForumID,
+			Forum:            t.Forum,
+			IsPinned:         t.IsPinned,
+			IsUserPinned:     t.IsUserPinned,
+			IsLocked:         t.IsLocked,
+			IsEssence:        t.IsEssence,
+			IsHidden:         t.IsHidden,
+			HotScore:         t.HotScore,
+			LikeCount:        t.LikeCount,
+			ViewCount:        t.ViewCount,
+			ReplyCount:       t.ReplyCount,
+			LastReplyAt:      t.LastReplyAt,
+			AllowComment:     t.AllowComment,
+			CreatedAt:        t.CreatedAt,
+			UpdatedAt:        t.UpdatedAt,
+			IsAnonymous:      t.IsAnonymous,
+			AnonymousType:    t.AnonymousType,
+			AnonymousUntil:   t.AnonymousUntil,
+			IsAnonymousEnded: t.IsAnonymousEnded,
+			Tags:             t.Tags,
+		}
+
+		if shouldShowAnonymous {
+			item.User = utils.GetAnonymousUserInfo()
+			item.UserID = 0
+		} else {
+			item.User = t.User
+		}
+
+		processedList = append(processedList, item)
+	}
+
 	errors.Success(w, map[string]interface{}{
-		"list":      topics,
+		"list":      processedList,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,

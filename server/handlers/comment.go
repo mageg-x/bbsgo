@@ -38,6 +38,17 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		pageSize = 20
 	}
 
+	// 查询话题信息（用于匿名判断）
+	var topic models.Topic
+	if err := database.DB.First(&topic, topicID).Error; err != nil {
+		log.Printf("get comments: topic not found, topicID: %d, error: %v", topicID, err)
+		errors.Error(w, errors.CodeTopicNotFound, "")
+		return
+	}
+
+	// 获取当前查看者信息（用于匿名判断）
+	viewerID, viewerRole, _ := middleware.GetOptionalUserInfo(r)
+
 	var comments []models.Comment
 	var total int64
 
@@ -87,38 +98,79 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 	// 构建响应结构，包含用户勋章和被回复用户信息
 	type CommentWithUserBadges struct {
 		models.Comment
-		User struct {
-			ID       uint               `json:"id"`
-			Username string             `json:"username"`
-			Nickname string             `json:"nickname"`
-			Avatar   string             `json:"avatar"`
-			Badges   []models.UserBadge `json:"badges"`
-		} `json:"user"`
-		ReplyUser *struct {
-			ID       uint   `json:"id"`
-			Username string `json:"username"`
-			Nickname string `json:"nickname"`
-		} `json:"reply_user,omitempty"`
+		User interface{} `json:"user"`
+		ReplyUser interface{} `json:"reply_user,omitempty"`
+	}
+
+	type AnonymousCommentUser struct {
+		ID          uint               `json:"id"`
+		Username    string             `json:"username"`
+		Nickname    string             `json:"nickname"`
+		Avatar      string             `json:"avatar"`
+		IsAnonymous bool               `json:"is_anonymous"`
+		Badges      []models.UserBadge `json:"badges"`
 	}
 
 	response := make([]CommentWithUserBadges, len(comments))
 	for i, comment := range comments {
 		response[i] = CommentWithUserBadges{Comment: comment}
-		response[i].User.ID = comment.User.ID
-		response[i].User.Username = comment.User.Username
-		response[i].User.Nickname = comment.User.Nickname
-		response[i].User.Avatar = comment.User.Avatar
-		response[i].User.Badges = userBadgesMap[comment.UserID]
-		// 如果是回复评论，添加被回复用户信息
-		if comment.ReplyTo != nil && comment.ReplyTo.User.ID != 0 {
-			response[i].ReplyUser = &struct {
-				ID       uint   `json:"id"`
-				Username string `json:"username"`
-				Nickname string `json:"nickname"`
+
+		// 判断当前评论是否需要显示匿名
+		shouldShowAnonymous := utils.ShouldShowAnonymousForComment(viewerID, comment.UserID, viewerRole, &topic)
+
+		if shouldShowAnonymous {
+			// 显示匿名用户
+			response[i].User = AnonymousCommentUser{
+				ID:          0,
+				Username:    "anonymous",
+				Nickname:    "匿名用户",
+				Avatar:      "",
+				IsAnonymous: true,
+				Badges:      []models.UserBadge{},
+			}
+			response[i].UserID = 0
+		} else {
+			// 显示真实用户
+			response[i].User = struct {
+				ID       uint               `json:"id"`
+				Username string             `json:"username"`
+				Nickname string             `json:"nickname"`
+				Avatar   string             `json:"avatar"`
+				Badges   []models.UserBadge `json:"badges"`
 			}{
-				ID:       comment.ReplyTo.User.ID,
-				Username: comment.ReplyTo.User.Username,
-				Nickname: comment.ReplyTo.User.Nickname,
+				ID:       comment.User.ID,
+				Username: comment.User.Username,
+				Nickname: comment.User.Nickname,
+				Avatar:   comment.User.Avatar,
+				Badges:   userBadgesMap[comment.UserID],
+			}
+		}
+
+		// 如果是回复评论，处理被回复用户信息
+		if comment.ReplyTo != nil && comment.ReplyTo.User.ID != 0 {
+			// 判断被回复用户是否需要显示匿名
+			shouldShowReplyAnonymous := utils.ShouldShowAnonymousForComment(viewerID, comment.ReplyTo.UserID, viewerRole, &topic)
+
+			if shouldShowReplyAnonymous {
+				response[i].ReplyUser = &struct {
+					ID       uint   `json:"id"`
+					Username string `json:"username"`
+					Nickname string `json:"nickname"`
+				}{
+					ID:       0,
+					Username: "anonymous",
+					Nickname: "匿名用户",
+				}
+			} else {
+				response[i].ReplyUser = &struct {
+					ID       uint   `json:"id"`
+					Username string `json:"username"`
+					Nickname string `json:"nickname"`
+				}{
+					ID:       comment.ReplyTo.User.ID,
+					Username: comment.ReplyTo.User.Username,
+					Nickname: comment.ReplyTo.User.Nickname,
+				}
 			}
 		}
 	}

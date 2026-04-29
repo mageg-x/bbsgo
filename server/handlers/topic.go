@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -50,7 +51,100 @@ func GetTopics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errors.Success(w, data)
+	// 获取当前查看者信息（用于匿名判断）
+	viewerID, viewerRole, _ := middleware.GetOptionalUserInfo(r)
+
+	// 处理匿名数据
+	result, ok := data.(map[string]interface{})
+	if !ok {
+		errors.Success(w, data)
+		return
+	}
+
+	list, ok := result["list"].([]TopicWithPoll)
+	if !ok {
+		errors.Success(w, data)
+		return
+	}
+
+	// 对每个话题应用匿名处理
+	type TopicWithPollAndAnonymity struct {
+		ID           uint                 `json:"id"`
+		Title        string               `json:"title"`
+		Content      string               `json:"content"`
+		UserID       uint                 `json:"user_id"`
+		User         interface{}          `json:"user"`
+		ForumID      uint                 `json:"forum_id"`
+		Forum        models.Forum         `json:"forum"`
+		IsPinned     bool                 `json:"is_pinned"`
+		IsUserPinned bool                 `json:"is_user_pinned"`
+		IsLocked     bool                 `json:"is_locked"`
+		IsEssence    bool                 `json:"is_essence"`
+		IsHidden     bool                 `json:"is_hidden"`
+		HotScore     float64              `json:"hot_score"`
+		LikeCount    int                  `json:"like_count"`
+		ViewCount    int                  `json:"view_count"`
+		ReplyCount   int                  `json:"reply_count"`
+		LastReplyAt  *time.Time           `json:"last_reply_at"`
+		AllowComment bool                 `json:"allow_comment"`
+		CreatedAt    time.Time            `json:"created_at"`
+		UpdatedAt    time.Time            `json:"updated_at"`
+		IsAnonymous  bool                 `json:"is_anonymous"`
+		AnonymousType models.AnonymousType `json:"anonymous_type"`
+		AnonymousUntil *time.Time         `json:"anonymous_until"`
+		IsAnonymousEnded bool             `json:"is_anonymous_ended"`
+		HasPoll      bool                 `json:"has_poll"`
+		AuthorBadges interface{}          `json:"author_badges"`
+		Tags         []models.Tag         `json:"tags"`
+	}
+
+	var processedList []TopicWithPollAndAnonymity
+	for _, t := range list {
+		topic := t.Topic
+		shouldShowAnonymous := utils.ShouldShowAnonymous(viewerID, topic.UserID, viewerRole, &topic)
+
+		item := TopicWithPollAndAnonymity{
+			ID:               topic.ID,
+			Title:            topic.Title,
+			Content:          topic.Content,
+			UserID:           topic.UserID,
+			ForumID:          topic.ForumID,
+			Forum:            topic.Forum,
+			IsPinned:         topic.IsPinned,
+			IsUserPinned:     topic.IsUserPinned,
+			IsLocked:         topic.IsLocked,
+			IsEssence:        topic.IsEssence,
+			IsHidden:         topic.IsHidden,
+			HotScore:         topic.HotScore,
+			LikeCount:        topic.LikeCount,
+			ViewCount:        topic.ViewCount,
+			ReplyCount:       topic.ReplyCount,
+			LastReplyAt:      topic.LastReplyAt,
+			AllowComment:     topic.AllowComment,
+			CreatedAt:        topic.CreatedAt,
+			UpdatedAt:        topic.UpdatedAt,
+			IsAnonymous:      topic.IsAnonymous,
+			AnonymousType:    topic.AnonymousType,
+			AnonymousUntil:   topic.AnonymousUntil,
+			IsAnonymousEnded: topic.IsAnonymousEnded,
+			HasPoll:          t.HasPoll,
+			Tags:             topic.Tags,
+		}
+
+		if shouldShowAnonymous {
+			item.User = utils.GetAnonymousUserInfo()
+			item.AuthorBadges = []models.UserBadge{}
+			item.UserID = 0
+		} else {
+			item.User = topic.User
+			item.AuthorBadges = t.AuthorBadges
+		}
+
+		processedList = append(processedList, item)
+	}
+
+	result["list"] = processedList
+	errors.Success(w, result)
 }
 
 // fetchTopics 获取话题列表核心逻辑
@@ -194,7 +288,25 @@ func GetTopic(w http.ResponseWriter, r *http.Request) {
 			UpdateColumn("view_count", database.DB.Raw("view_count + 1"))
 	}(topic.ID)
 
-	errors.Success(w, topic)
+	// 获取当前查看者信息（用于匿名判断）
+	viewerID, viewerRole, _ := middleware.GetOptionalUserInfo(r)
+	shouldShowAnonymous := utils.ShouldShowAnonymous(viewerID, topic.UserID, viewerRole, &topic)
+
+	// 构建响应数据
+	type TopicResponse struct {
+		models.Topic
+		User interface{} `json:"user"`
+	}
+
+	resp := TopicResponse{Topic: topic}
+	if shouldShowAnonymous {
+		resp.User = utils.GetAnonymousUserInfo()
+		resp.UserID = 0
+	} else {
+		resp.User = topic.User
+	}
+
+	errors.Success(w, resp)
 }
 
 // CreateTopic 创建话题处理器
@@ -225,10 +337,13 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 
 	// 解析请求体
 	var req struct {
-		Title    string   `json:"title"`     // 话题标题
-		Content  string   `json:"content"`   // 话题内容
-		ForumID  uint     `json:"forum_id"`  // 版块ID
-		TagNames []string `json:"tag_names"` // 标签名称列表
+		Title          string   `json:"title"`            // 话题标题
+		Content        string   `json:"content"`          // 话题内容
+		ForumID        uint     `json:"forum_id"`         // 版块ID
+		TagNames       []string `json:"tag_names"`        // 标签名称列表
+		IsAnonymous    bool     `json:"is_anonymous"`     // 是否匿名
+		AnonymousType  string   `json:"anonymous_type"`   // 匿名类型：permanent永久, timed定时
+		AnonymousHours int      `json:"anonymous_hours"`  // 定时匿名的小时数（仅当anonymous_type为timed时有效）
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create topic: failed to decode request body, error: %v", err)
@@ -301,6 +416,29 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 		ForumID:      req.ForumID,
 		AllowComment: true,           // 默认允许评论
 		Tags:         []models.Tag{}, // 初始化 Tags 为空切片，避免 nil 导致的空指针异常
+	}
+
+	// 处理匿名选项
+	if req.IsAnonymous {
+		topic.IsAnonymous = true
+		topic.IsAnonymousEnded = false
+
+		// 设置匿名类型
+		switch req.AnonymousType {
+		case string(models.AnonymousTypeTimed):
+			topic.AnonymousType = models.AnonymousTypeTimed
+			// 验证定时匿名的小时数
+			if req.AnonymousHours <= 0 {
+				req.AnonymousHours = 24 // 默认24小时
+			}
+			// 计算解匿时间
+			until := time.Now().Add(time.Duration(req.AnonymousHours) * time.Hour)
+			topic.AnonymousUntil = &until
+		default:
+			// 默认永久匿名
+			topic.AnonymousType = models.AnonymousTypePermanent
+			topic.AnonymousUntil = nil
+		}
 	}
 
 	if err := database.DB.Create(&topic).Error; err != nil {
@@ -585,4 +723,60 @@ func UserPinTopic(w http.ResponseWriter, r *http.Request) {
 		"id":             topic.ID,
 		"is_user_pinned": req.Pinned,
 	})
+}
+
+// EndAnonymous 作者手动结束匿名处理器
+// 作者可以随时手动关闭匿名状态
+func EndAnonymous(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		log.Printf("end anonymous: user not authenticated")
+		errors.ErrorWithStatus(w, 401, errors.CodeUnauthorized, "")
+		return
+	}
+
+	vars := mux.Vars(r)
+	id, _ := strconv.Atoi(vars["id"])
+
+	// 查询话题
+	var topic models.Topic
+	if err := database.DB.First(&topic, id).Error; err != nil {
+		log.Printf("end anonymous: topic not found, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeTopicNotFound, "")
+		return
+	}
+
+	// 验证权限：仅作者可以操作
+	if topic.UserID != userID {
+		log.Printf("end anonymous: permission denied, topicID: %d, userID: %d", id, userID)
+		errors.Error(w, errors.CodeNoPermission, "")
+		return
+	}
+
+	// 检查是否已经是匿名结束状态
+	if !topic.IsAnonymous {
+		errors.Error(w, errors.CodeInvalidParams, "该帖子未设置匿名")
+		return
+	}
+	if topic.IsAnonymousEnded {
+		errors.Error(w, errors.CodeInvalidParams, "该帖子匿名已结束")
+		return
+	}
+
+	// 更新匿名结束状态
+	if err := database.DB.Model(&topic).UpdateColumn("is_anonymous_ended", true).Error; err != nil {
+		log.Printf("end anonymous: failed to update anonymous status, id: %d, error: %v", id, err)
+		errors.Error(w, errors.CodeServerInternal, "")
+		return
+	}
+
+	log.Printf("end anonymous: topic anonymous ended, id: %d", id)
+	errors.Success(w, map[string]interface{}{
+		"id":                 topic.ID,
+		"is_anonymous_ended": true,
+	})
+
+	// 清除缓存
+	cache.TopicCache.Invalidate(id)
+	cache.HomePageCache.InvalidateTopics()
 }

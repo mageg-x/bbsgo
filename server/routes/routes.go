@@ -83,6 +83,7 @@ func SetupRoutes() *mux.Router {
 	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")      // 更新话题
 	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")   // 删除话题
 	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT") // 作者置顶/取消置顶
+	auth.HandleFunc("/topics/{id}/end-anonymous", handlers.EndAnonymous).Methods("PUT") // 作者手动结束匿名
 
 	// 评论操作
 	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                      // 创建评论
@@ -296,6 +297,7 @@ func SetupAPIRoutes(api *mux.Router) {
 	auth.HandleFunc("/topics/{id}", handlers.UpdateTopic).Methods("PUT")      // 更新话题
 	auth.HandleFunc("/topics/{id}", handlers.DeleteTopic).Methods("DELETE")   // 删除话题
 	auth.HandleFunc("/topics/{id}/pin", handlers.UserPinTopic).Methods("PUT") // 作者置顶/取消置顶
+	auth.HandleFunc("/topics/{id}/end-anonymous", handlers.EndAnonymous).Methods("PUT") // 作者手动结束匿名
 
 	// 评论操作
 	auth.HandleFunc("/topics/{id}/comments", handlers.CreateComment).Methods("POST")                      // 创建评论

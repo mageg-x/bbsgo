@@ -4,7 +4,9 @@ import (
 	"bbsgo/cache"
 	"bbsgo/database"
 	"bbsgo/errors"
+	"bbsgo/middleware"
 	"bbsgo/models"
+	"bbsgo/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -27,12 +29,18 @@ func GetHomePage(w http.ResponseWriter, r *http.Request) {
 	announcements, _ := homePageAnnouncements()
 	topics, total, _ := fetchTopicsForHome(1, 20)
 
+	// 获取当前查看者信息（用于匿名判断）
+	viewerID, viewerRole, _ := middleware.GetOptionalUserInfo(r)
+
+	// 处理匿名数据
+	processedTopics := processTopicsForAnonymity(topics, viewerID, viewerRole)
+
 	homeData := map[string]interface{}{
 		"forums":        forums,
 		"tags":          tags,
 		"announcements": announcements,
 		"topics": map[string]interface{}{
-			"list":      topics,
+			"list":      processedTopics,
 			"total":     total,
 			"page":      1,
 			"page_size": 20,
@@ -228,12 +236,18 @@ func GetHomePageWithQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 获取当前查看者信息（用于匿名判断）
+	viewerID, viewerRole, _ := middleware.GetOptionalUserInfo(r)
+
+	// 处理匿名数据
+	processedTopics := processTopicsForAnonymity(topics, viewerID, viewerRole)
+
 	homeData := map[string]interface{}{
 		"forums":        forums,
 		"tags":          tags,
 		"announcements": announcements,
 		"topics": map[string]interface{}{
-			"list":      topics,
+			"list":      processedTopics,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
@@ -242,6 +256,86 @@ func GetHomePageWithQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	errors.Success(w, homeData)
+}
+
+// processTopicsForAnonymity 处理话题列表的匿名数据
+func processTopicsForAnonymity(topics []TopicWithPoll, viewerID uint, viewerRole int) []interface{} {
+	type ProcessedTopic struct {
+		ID             uint                 `json:"id"`
+		Title          string               `json:"title"`
+		Content        string               `json:"content"`
+		UserID         uint                 `json:"user_id"`
+		User           interface{}          `json:"user"`
+		ForumID        uint                 `json:"forum_id"`
+		Forum          models.Forum         `json:"forum"`
+		IsPinned       bool                 `json:"is_pinned"`
+		IsUserPinned   bool                 `json:"is_user_pinned"`
+		IsLocked       bool                 `json:"is_locked"`
+		IsEssence      bool                 `json:"is_essence"`
+		IsHidden       bool                 `json:"is_hidden"`
+		HotScore       float64              `json:"hot_score"`
+		LikeCount      int                  `json:"like_count"`
+		ViewCount      int                  `json:"view_count"`
+		ReplyCount     int                  `json:"reply_count"`
+		LastReplyAt    *time.Time           `json:"last_reply_at"`
+		AllowComment   bool                 `json:"allow_comment"`
+		CreatedAt      time.Time            `json:"created_at"`
+		UpdatedAt      time.Time            `json:"updated_at"`
+		IsAnonymous    bool                 `json:"is_anonymous"`
+		AnonymousType  models.AnonymousType `json:"anonymous_type"`
+		AnonymousUntil *time.Time           `json:"anonymous_until"`
+		IsAnonymousEnded bool               `json:"is_anonymous_ended"`
+		HasPoll        bool                 `json:"has_poll"`
+		AuthorBadges   interface{}          `json:"author_badges"`
+		Tags           []models.Tag         `json:"tags"`
+	}
+
+	var processedList []interface{}
+	for _, t := range topics {
+		topic := t.Topic
+		shouldShowAnonymous := utils.ShouldShowAnonymous(viewerID, topic.UserID, viewerRole, &topic)
+
+		item := ProcessedTopic{
+			ID:               topic.ID,
+			Title:            topic.Title,
+			Content:          topic.Content,
+			UserID:           topic.UserID,
+			ForumID:          topic.ForumID,
+			Forum:            topic.Forum,
+			IsPinned:         topic.IsPinned,
+			IsUserPinned:     topic.IsUserPinned,
+			IsLocked:         topic.IsLocked,
+			IsEssence:        topic.IsEssence,
+			IsHidden:         topic.IsHidden,
+			HotScore:         topic.HotScore,
+			LikeCount:        topic.LikeCount,
+			ViewCount:        topic.ViewCount,
+			ReplyCount:       topic.ReplyCount,
+			LastReplyAt:      topic.LastReplyAt,
+			AllowComment:     topic.AllowComment,
+			CreatedAt:        topic.CreatedAt,
+			UpdatedAt:        topic.UpdatedAt,
+			IsAnonymous:      topic.IsAnonymous,
+			AnonymousType:    topic.AnonymousType,
+			AnonymousUntil:   topic.AnonymousUntil,
+			IsAnonymousEnded: topic.IsAnonymousEnded,
+			HasPoll:          t.HasPoll,
+			Tags:             topic.Tags,
+		}
+
+		if shouldShowAnonymous {
+			item.User = utils.GetAnonymousUserInfo()
+			item.AuthorBadges = []models.UserBadge{}
+			item.UserID = 0
+		} else {
+			item.User = topic.User
+			item.AuthorBadges = t.AuthorBadges
+		}
+
+		processedList = append(processedList, item)
+	}
+
+	return processedList
 }
 
 // fetchHomePageTopicsByQuery 获取筛选条件的话题列表
