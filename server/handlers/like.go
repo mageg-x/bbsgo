@@ -96,6 +96,11 @@ func CreateLike(w http.ResponseWriter, r *http.Request) {
 		go likeBadgeService.CheckAndAwardBadges(contentOwnerID)
 	}
 
+	// 如果是点赞话题，检查是否满足解锁条件
+	if req.TargetType == "topic" {
+		go checkAndCreateUnlockRecord(userID, req.TargetID, "like")
+	}
+
 	log.Printf("create like: like created successfully, userID: %d, targetType: %s, targetID: %d", userID, req.TargetType, req.TargetID)
 	errors.Success(w, like)
 }

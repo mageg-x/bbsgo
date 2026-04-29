@@ -31,9 +31,17 @@ type Topic struct {
 	UpdatedAt    time.Time      `json:"updated_at"`                           // 更新时间
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`                       // 软删除时间
 
+	// 内容渐进解锁相关字段
+	IsUnlockEnabled   bool   `gorm:"default:false" json:"is_unlock_enabled"`   // 是否启用解锁功能
+	UnlockType        string `gorm:"size:20;default:''" json:"unlock_type"`   // 解锁类型：like=点赞解锁, comment=评论解锁, both=两者都需要
+	UnlockLikeCount   int    `gorm:"default:0" json:"unlock_like_count"`      // 解锁所需点赞数门槛
+	UnlockCommentCount int   `gorm:"default:0" json:"unlock_comment_count"`   // 解锁所需回复数门槛
+	PreviewLength     int    `gorm:"default:200" json:"preview_length"`        // 内容预览长度（字符数）
+
 	// 关联关系
 	Comments  []Comment  `gorm:"foreignKey:TopicID" json:"-"`      // 话题下的所有评论
 	Likes     []Like     `gorm:"foreignKey:TargetID" json:"-"`      // 话题的点赞记录
 	Favorites []Favorite `gorm:"foreignKey:TopicID" json:"-"`       // 话题的收藏记录
 	Tags      []Tag      `gorm:"many2many:topic_tags;" json:"tags"` // 话题关联的标签
+	UnlockRecords []UnlockRecord `gorm:"foreignKey:TopicID" json:"-"` // 话题的解锁记录
 }

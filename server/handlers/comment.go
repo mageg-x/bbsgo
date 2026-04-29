@@ -277,6 +277,9 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	// 检查并授予勋章
 	go commentBadgeService.CheckAndAwardBadges(userID)
+
+	// 检查是否满足解锁条件
+	go checkAndCreateUnlockRecord(userID, uint(topicID), "comment")
 }
 
 // UpdateComment 更新评论处理器

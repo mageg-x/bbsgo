@@ -35,7 +35,100 @@
           <div class="text-xs sm:text-sm text-gray-500">{{ formatTime(topic.created_at) }} · {{ topic.view_count }} {{ t('home.views') }}</div>
         </div>
       </div>
-      <div class="prose max-w-none mb-6 topic-content" v-html="renderMarkdown(topic.content)"></div>
+      
+      <!-- 内容解锁状态显示 -->
+      <div v-if="topic.is_unlock_enabled && !topic.is_unlocked" class="mb-6">
+        <!-- 解锁进度提示 -->
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 sm:p-6 mb-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0">
+              <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-amber-800 mb-2">内容已锁定，完成互动解锁全文</h3>
+              
+              <!-- 解锁进度条 -->
+              <div class="space-y-3">
+                <!-- 点赞进度 -->
+                <div v-if="topic.unlock_type === 'like' || topic.unlock_type === 'both'">
+                  <div class="flex items-center justify-between text-xs text-amber-700 mb-1">
+                    <span>点赞进度</span>
+                    <span>{{ topic.unlock_progress.like_current }} / {{ topic.unlock_progress.like_needed }}</span>
+                  </div>
+                  <div class="w-full bg-amber-200 rounded-full h-2">
+                    <div class="bg-amber-500 h-2 rounded-full transition-all duration-500"
+                      :style="{ width: (topic.unlock_progress.like_progress * 100) + '%' }"></div>
+                  </div>
+                </div>
+                
+                <!-- 评论进度 -->
+                <div v-if="topic.unlock_type === 'comment' || topic.unlock_type === 'both'">
+                  <div class="flex items-center justify-between text-xs text-amber-700 mb-1">
+                    <span>评论进度</span>
+                    <span>{{ topic.unlock_progress.comment_current }} / {{ topic.unlock_progress.comment_needed }}</span>
+                  </div>
+                  <div class="w-full bg-amber-200 rounded-full h-2">
+                    <div class="bg-amber-500 h-2 rounded-full transition-all duration-500"
+                      :style="{ width: (topic.unlock_progress.comment_progress * 100) + '%' }"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 解锁提示 -->
+              <div class="mt-3 text-xs text-amber-600">
+                <p v-if="topic.unlock_type === 'like'">需要 {{ topic.unlock_progress.like_needed }} 个点赞解锁全文</p>
+                <p v-else-if="topic.unlock_type === 'comment'">需要 {{ topic.unlock_progress.comment_needed }} 条评论解锁全文</p>
+                <p v-else>需要 {{ topic.unlock_progress.like_needed }} 个点赞 + {{ topic.unlock_progress.comment_needed }} 条评论解锁全文</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 内容预览 -->
+        <div class="prose max-w-none mb-6 topic-content" v-html="renderMarkdown(topic.content)"></div>
+        
+        <!-- 解锁引导 -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 sm:p-6 text-center">
+          <div class="flex items-center justify-center gap-2 mb-3">
+            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <h3 class="text-sm font-semibold text-blue-800">完成互动，解锁全文</h3>
+          </div>
+          <p class="text-xs text-blue-600 mb-4">
+            点赞或评论此帖子，满足条件后自动解锁完整内容
+          </p>
+          <div class="flex flex-wrap justify-center gap-3">
+            <button v-if="topic.unlock_type === 'like' || topic.unlock_type === 'both'"
+              @click="toggleLike"
+              :class="['inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                liked ? 'bg-red-100 text-red-600' : 'bg-blue-500 text-white hover:bg-blue-600']">
+              <svg class="w-4 h-4" :fill="liked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                </path>
+              </svg>
+              {{ liked ? '已点赞' : '点赞解锁' }}
+            </button>
+            <button v-if="topic.unlock_type === 'comment' || topic.unlock_type === 'both'"
+              @click="scrollToComment"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+              </svg>
+              评论解锁
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 完整内容显示（已解锁或未启用解锁功能） -->
+      <div v-else class="prose max-w-none mb-6 topic-content" v-html="renderMarkdown(topic.content)"></div>
 
       <div v-if="poll && configStore.state.allow_poll"
         class="mb-6 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
@@ -829,6 +922,14 @@ async function toggleLike() {
       topic.value.like_count++
     }
     liked.value = !liked.value
+    
+    // 如果启用了解锁功能，重新加载话题数据以检查解锁状态
+    if (topic.value.is_unlock_enabled) {
+      setTimeout(async () => {
+        await loadTopic()
+        ElMessage.success('互动成功，正在检查解锁状态...')
+      }, 500)
+    }
   } catch (e) {
     console.error(e)
     if (e.code) {
@@ -1012,8 +1113,17 @@ async function submitPost() {
     newPost.value = ''
     replyTo.value = null
     replyToUser.value = null
-    loadTopic()
-    ElMessage.success(t('topic.commentSuccess'))
+    
+    // 如果启用了解锁功能，重新加载话题数据以检查解锁状态
+    if (topic.value.is_unlock_enabled) {
+      setTimeout(async () => {
+        await loadTopic()
+        ElMessage.success('评论成功，正在检查解锁状态...')
+      }, 500)
+    } else {
+      loadTopic()
+      ElMessage.success(t('topic.commentSuccess'))
+    }
   } catch (e) {
     // 根据错误码显示具体错误信息
     const errorKey = getErrorI18nKey(e.code)
@@ -1027,6 +1137,20 @@ function openReply(post) {
   replyToUser.value = getUserDisplayName(post.user)
   // 滚动到评论输入框
   document.querySelector('.topic-detail-container')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+function scrollToComment() {
+  // 滚动到评论输入框
+  const commentSection = document.querySelector('.topic-detail-container')
+  if (commentSection) {
+    commentSection.scrollIntoView({ behavior: 'smooth' })
+  } else {
+    // 如果找不到特定容器，滚动到评论区域
+    const commentsSection = document.querySelector('.mt-8')
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
 }
 
 function cancelReply() {

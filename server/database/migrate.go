@@ -35,6 +35,7 @@ func AutoMigrate() {
 		&models.ReputationLog{},    // 信誉分日志表
 		&models.ContentQuality{},   // 内容质量表
 		&models.UserBan{},          // 用户禁言表
+		&models.UnlockRecord{},     // 解锁记录表
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)

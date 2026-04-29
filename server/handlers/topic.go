@@ -194,7 +194,122 @@ func GetTopic(w http.ResponseWriter, r *http.Request) {
 			UpdateColumn("view_count", database.DB.Raw("view_count + 1"))
 	}(topic.ID)
 
-	errors.Success(w, topic)
+	// 处理内容解锁逻辑
+	response := prepareTopicResponse(&topic, r)
+
+	errors.Success(w, response)
+}
+
+// prepareTopicResponse 准备话题响应，处理内容解锁逻辑
+func prepareTopicResponse(topic *models.Topic, r *http.Request) map[string]interface{} {
+	// 构建基础响应
+	response := map[string]interface{}{
+		"id":                    topic.ID,
+		"title":                 topic.Title,
+		"content":               topic.Content,
+		"user_id":               topic.UserID,
+		"user":                  topic.User,
+		"forum_id":              topic.ForumID,
+		"forum":                 topic.Forum,
+		"is_pinned":             topic.IsPinned,
+		"is_user_pinned":        topic.IsUserPinned,
+		"is_locked":             topic.IsLocked,
+		"is_essence":            topic.IsEssence,
+		"is_hidden":             topic.IsHidden,
+		"hot_score":             topic.HotScore,
+		"like_count":            topic.LikeCount,
+		"view_count":            topic.ViewCount,
+		"reply_count":           topic.ReplyCount,
+		"last_reply_at":         topic.LastReplyAt,
+		"allow_comment":         topic.AllowComment,
+		"created_at":            topic.CreatedAt,
+		"updated_at":            topic.UpdatedAt,
+		"tags":                  topic.Tags,
+		"is_unlock_enabled":     topic.IsUnlockEnabled,
+		"unlock_type":           topic.UnlockType,
+		"unlock_like_count":     topic.UnlockLikeCount,
+		"unlock_comment_count":  topic.UnlockCommentCount,
+		"preview_length":        topic.PreviewLength,
+		"is_unlocked":           true, // 默认已解锁
+		"unlock_progress":       map[string]interface{}{},
+	}
+
+	// 如果没有启用解锁功能，直接返回完整内容
+	if !topic.IsUnlockEnabled {
+		return response
+	}
+
+	// 获取当前用户ID
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	
+	// 检查是否是作者本人（作者总是可以看到完整内容）
+	if ok && userID == topic.UserID {
+		return response
+	}
+
+	// 检查用户是否已经解锁
+	var isUnlocked bool
+	if ok {
+		var unlockRecord models.UnlockRecord
+		if err := database.DB.Where("user_id = ? AND topic_id = ?", userID, topic.ID).First(&unlockRecord).Error; err == nil {
+			isUnlocked = true
+		}
+	}
+
+	// 计算解锁进度
+	unlockProgress := calculateUnlockProgress(topic)
+	response["unlock_progress"] = unlockProgress
+
+	// 如果未解锁，只返回部分内容
+	if !isUnlocked {
+		response["is_unlocked"] = false
+		// 截取内容预览
+		content := topic.Content
+		if len(content) > topic.PreviewLength {
+			response["content"] = content[:topic.PreviewLength] + "..."
+		} else {
+			response["content"] = content
+		}
+	}
+
+	return response
+}
+
+// calculateUnlockProgress 计算解锁进度
+func calculateUnlockProgress(topic *models.Topic) map[string]interface{} {
+	progress := map[string]interface{}{
+		"like_progress":    0,
+		"comment_progress": 0,
+		"like_needed":      topic.UnlockLikeCount,
+		"comment_needed":   topic.UnlockCommentCount,
+		"like_current":     topic.LikeCount,
+		"comment_current":  topic.ReplyCount,
+		"unlock_type":      topic.UnlockType,
+	}
+
+	// 计算点赞进度
+	if topic.UnlockType == "like" || topic.UnlockType == "both" {
+		if topic.UnlockLikeCount > 0 {
+			likeProgress := float64(topic.LikeCount) / float64(topic.UnlockLikeCount)
+			if likeProgress > 1 {
+				likeProgress = 1
+			}
+			progress["like_progress"] = likeProgress
+		}
+	}
+
+	// 计算评论进度
+	if topic.UnlockType == "comment" || topic.UnlockType == "both" {
+		if topic.UnlockCommentCount > 0 {
+			commentProgress := float64(topic.ReplyCount) / float64(topic.UnlockCommentCount)
+			if commentProgress > 1 {
+				commentProgress = 1
+			}
+			progress["comment_progress"] = commentProgress
+		}
+	}
+
+	return progress
 }
 
 // CreateTopic 创建话题处理器
@@ -225,10 +340,15 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 
 	// 解析请求体
 	var req struct {
-		Title    string   `json:"title"`     // 话题标题
-		Content  string   `json:"content"`   // 话题内容
-		ForumID  uint     `json:"forum_id"`  // 版块ID
-		TagNames []string `json:"tag_names"` // 标签名称列表
+		Title               string   `json:"title"`                // 话题标题
+		Content             string   `json:"content"`              // 话题内容
+		ForumID             uint     `json:"forum_id"`             // 版块ID
+		TagNames            []string `json:"tag_names"`            // 标签名称列表
+		IsUnlockEnabled     bool     `json:"is_unlock_enabled"`    // 是否启用解锁功能
+		UnlockType          string   `json:"unlock_type"`          // 解锁类型：like=点赞解锁, comment=评论解锁, both=两者都需要
+		UnlockLikeCount     int      `json:"unlock_like_count"`    // 解锁所需点赞数门槛
+		UnlockCommentCount  int      `json:"unlock_comment_count"` // 解锁所需回复数门槛
+		PreviewLength       int      `json:"preview_length"`       // 内容预览长度（字符数）
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("create topic: failed to decode request body, error: %v", err)
@@ -293,14 +413,51 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 验证解锁条件参数
+	if req.IsUnlockEnabled {
+		// 验证解锁类型
+		if req.UnlockType != "like" && req.UnlockType != "comment" && req.UnlockType != "both" {
+			log.Printf("create topic: invalid unlock type, unlockType: %s", req.UnlockType)
+			errors.Error(w, errors.CodeInvalidParams, "无效的解锁类型")
+			return
+		}
+		
+		// 验证解锁门槛
+		if req.UnlockType == "like" || req.UnlockType == "both" {
+			if req.UnlockLikeCount <= 0 {
+				log.Printf("create topic: invalid unlock like count, unlockLikeCount: %d", req.UnlockLikeCount)
+				errors.Error(w, errors.CodeInvalidParams, "点赞数门槛必须大于0")
+				return
+			}
+		}
+		
+		if req.UnlockType == "comment" || req.UnlockType == "both" {
+			if req.UnlockCommentCount <= 0 {
+				log.Printf("create topic: invalid unlock comment count, unlockCommentCount: %d", req.UnlockCommentCount)
+				errors.Error(w, errors.CodeInvalidParams, "回复数门槛必须大于0")
+				return
+			}
+		}
+		
+		// 验证预览长度
+		if req.PreviewLength <= 0 {
+			req.PreviewLength = 200 // 默认预览长度
+		}
+	}
+
 	// 创建话题
 	topic := models.Topic{
-		Title:        req.Title,
-		Content:      req.Content,
-		UserID:       userID,
-		ForumID:      req.ForumID,
-		AllowComment: true,           // 默认允许评论
-		Tags:         []models.Tag{}, // 初始化 Tags 为空切片，避免 nil 导致的空指针异常
+		Title:               req.Title,
+		Content:             req.Content,
+		UserID:              userID,
+		ForumID:             req.ForumID,
+		AllowComment:        true,                  // 默认允许评论
+		Tags:                []models.Tag{},        // 初始化 Tags 为空切片，避免 nil 导致的空指针异常
+		IsUnlockEnabled:     req.IsUnlockEnabled,   // 是否启用解锁功能
+		UnlockType:          req.UnlockType,        // 解锁类型
+		UnlockLikeCount:     req.UnlockLikeCount,   // 点赞数门槛
+		UnlockCommentCount:  req.UnlockCommentCount,// 回复数门槛
+		PreviewLength:       req.PreviewLength,     // 预览长度
 	}
 
 	if err := database.DB.Create(&topic).Error; err != nil {

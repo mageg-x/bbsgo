@@ -133,6 +133,61 @@
           </div>
         </div>
 
+        <!-- 内容解锁配置 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <label class="text-gray-800 text-sm font-semibold">内容互动解锁</label>
+            <button type="button" @click="form.is_unlock_enabled = !form.is_unlock_enabled"
+              :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors', form.is_unlock_enabled ? 'bg-blue-500' : 'bg-gray-200']">
+              <span
+                :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform', form.is_unlock_enabled ? 'translate-x-6' : 'translate-x-1']"></span>
+            </button>
+          </div>
+
+          <div v-if="form.is_unlock_enabled" class="space-y-4 pt-4 border-t border-gray-100">
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-2">解锁条件</label>
+              <el-select v-model="form.unlock_type" class="w-full">
+                <el-option label="点赞解锁" value="like" />
+                <el-option label="评论解锁" value="comment" />
+                <el-option label="点赞+评论解锁" value="both" />
+              </el-select>
+            </div>
+
+            <div v-if="form.unlock_type === 'like' || form.unlock_type === 'both'" class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-gray-700 text-sm font-medium mb-2">所需点赞数</label>
+                <el-input-number v-model="form.unlock_like_count" :min="1" :max="1000" class="w-full" />
+              </div>
+            </div>
+
+            <div v-if="form.unlock_type === 'comment' || form.unlock_type === 'both'" class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-gray-700 text-sm font-medium mb-2">所需评论数</label>
+                <el-input-number v-model="form.unlock_comment_count" :min="1" :max="1000" class="w-full" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-2">内容预览长度（字符）</label>
+              <el-input-number v-model="form.preview_length" :min="50" :max="1000" class="w-full" />
+              <p class="text-xs text-gray-400 mt-1">未解锁用户只能看到前N个字符的内容预览</p>
+            </div>
+
+            <div class="p-4 bg-blue-50 rounded-lg">
+              <h4 class="text-sm font-medium text-blue-800 mb-2">解锁说明</h4>
+              <ul class="text-xs text-blue-700 space-y-1">
+                <li>• 访客完成指定互动后自动解锁全文</li>
+                <li>• 解锁状态永久生效，一次解锁终身有效</li>
+                <li>• 作者本人无需解锁，可直接查看完整内容</li>
+                <li v-if="form.unlock_type === 'like'">• 当前设置：需要 {{ form.unlock_like_count }} 个点赞解锁</li>
+                <li v-if="form.unlock_type === 'comment'">• 当前设置：需要 {{ form.unlock_comment_count }} 条评论解锁</li>
+                <li v-if="form.unlock_type === 'both'">• 当前设置：需要 {{ form.unlock_like_count }} 个点赞 + {{ form.unlock_comment_count }} 条评论解锁</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
             <div class="flex items-center justify-between">
@@ -500,7 +555,12 @@ const form = ref({
   title: '',
   content: '',
   forum_id: '',
-  tag_names: []
+  tag_names: [],
+  is_unlock_enabled: false,
+  unlock_type: 'like',
+  unlock_like_count: 1,
+  unlock_comment_count: 1,
+  preview_length: 200
 })
 const forums = ref([])
 const selectedTags = ref([])
