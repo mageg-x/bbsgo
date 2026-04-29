@@ -67,6 +67,55 @@
             </div>
             <p class="text-xs text-gray-400 mt-2">{{ t('newTopic.tagRule') }}</p>
           </div>
+
+          <div class="mb-4 sm:mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <label class="block text-gray-800 text-sm font-semibold">{{ t('newTopic.anonymous') }}</label>
+                <span class="text-xs text-gray-400">{{ t('newTopic.anonymousTip') }}</span>
+              </div>
+              <button type="button" @click="form.value.is_anonymous = !form.value.is_anonymous"
+                :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors', form.value.is_anonymous ? 'bg-blue-500' : 'bg-gray-200']">
+                <span
+                  :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform', form.value.is_anonymous ? 'translate-x-6' : 'translate-x-1']"></span>
+              </button>
+            </div>
+
+            <div v-if="form.value.is_anonymous" class="space-y-4 pt-4 border-t border-gray-100">
+              <div>
+                <label class="block text-gray-700 text-sm font-medium mb-2">{{ t('newTopic.anonymousType') }}</label>
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" v-model="form.value.anonymous_type" value="permanent"
+                      class="w-4 h-4 text-blue-500 focus:ring-blue-500" />
+                    <span class="text-sm text-gray-700">{{ t('newTopic.anonymousPermanent') }}</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" v-model="form.value.anonymous_type" value="timed"
+                      class="w-4 h-4 text-blue-500 focus:ring-blue-500" />
+                    <span class="text-sm text-gray-700">{{ t('newTopic.anonymousTimed') }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div v-if="form.value.anonymous_type === 'timed'">
+                <label class="block text-gray-700 text-sm font-medium mb-2">{{ t('newTopic.anonymousHours') }} <span
+                    class="text-gray-400 font-normal">{{ t('newTopic.anonymousHoursPlaceholder') }}</span></label>
+                <el-select v-model="form.value.anonymous_hours" class="w-full"
+                  :placeholder="t('newTopic.anonymousHoursDefault')">
+                  <el-option label="1小时" :value="1" />
+                  <el-option label="2小时" :value="2" />
+                  <el-option label="3小时" :value="3" />
+                  <el-option label="6小时" :value="6" />
+                  <el-option label="12小时" :value="12" />
+                  <el-option label="24小时" :value="24" />
+                  <el-option label="48小时 (2天)" :value="48" />
+                  <el-option label="72小时 (3天)" :value="72" />
+                  <el-option label="168小时 (7天)" :value="168" />
+                </el-select>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div v-if="configStore.state.allow_poll" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
@@ -500,7 +549,10 @@ const form = ref({
   title: '',
   content: '',
   forum_id: '',
-  tag_names: []
+  tag_names: [],
+  is_anonymous: false,
+  anonymous_type: 'permanent',
+  anonymous_hours: 24
 })
 const forums = ref([])
 const selectedTags = ref([])

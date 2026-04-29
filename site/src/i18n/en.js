@@ -383,7 +383,15 @@ export default {
     postPublishDisabledTip: 'The administrator has temporarily disabled posting. Please try again later.',
     backToHome: 'Back to Home',
     newPost: 'New Post',
-    shareYourThoughts: 'Share your thoughts and insights'
+    shareYourThoughts: 'Share your thoughts and insights',
+    anonymous: 'Anonymous Post',
+    anonymousTip: 'Your identity will be hidden after posting. Other users cannot see your nickname and avatar.',
+    anonymousType: 'Anonymous Type',
+    anonymousPermanent: 'Permanent Anonymous',
+    anonymousTimed: 'Auto Unmask',
+    anonymousHours: 'Unmask Time (hours)',
+    anonymousHoursPlaceholder: 'Will automatically unmask after the specified time',
+    anonymousHoursDefault: 'After 24 hours'
   },
   notifications: {
     title: 'Notifications',

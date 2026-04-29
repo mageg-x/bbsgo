@@ -383,7 +383,15 @@ export default {
     postPublishDisabledTip: '管理员暂时关闭了发帖功能，请稍后再试。',
     backToHome: '返回首页',
     newPost: '发表新帖',
-    shareYourThoughts: '分享你的想法和见解'
+    shareYourThoughts: '分享你的想法和见解',
+    anonymous: '匿名发布',
+    anonymousTip: '发布后隐藏您的身份信息，其他用户将无法看到您的昵称和头像',
+    anonymousType: '匿名类型',
+    anonymousPermanent: '永久匿名',
+    anonymousTimed: '定时解匿',
+    anonymousHours: '解匿时间（小时）',
+    anonymousHoursPlaceholder: '选择后将在指定时间后自动解除匿名',
+    anonymousHoursDefault: '24小时后'
   },
   notifications: {
     title: '通知',
